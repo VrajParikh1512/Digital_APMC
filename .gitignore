@@ -1,0 +1,8 @@
+# Dependency directories
+node_modules/
+
+# Environment variables
+backend/.env
+
+# Build output (for Vite frontend)
+dist/
