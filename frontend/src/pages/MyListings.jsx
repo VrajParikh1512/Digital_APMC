@@ -1,9 +1,11 @@
 import { useState, useEffect, useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import { Navigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 
 const MyListings = () => {
-  const { user } = useContext(AuthContext);
+  const { user, logout } = useContext(AuthContext);
+  const { t } = useTranslation();
   const [listings, setListings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState(null);
@@ -26,9 +28,19 @@ const MyListings = () => {
         }
       });
       const data = await res.json();
-      setListings(data);
+      
+      if (res.ok) {
+        setListings(data);
+      } else {
+        if (res.status === 401 && logout) {
+          logout();
+        } else {
+          setListings([]);
+        }
+      }
     } catch (error) {
       console.error('Error fetching listings', error);
+      setListings([]);
     } finally {
       setLoading(false);
     }
@@ -120,35 +132,35 @@ const MyListings = () => {
         
         {/* Form Section */}
         <div className="glass-panel" style={{ margin: 0, maxWidth: '100%' }}>
-          <h2>{editingId ? 'Edit Listing' : 'Create New Listing'}</h2>
+          <h2>{editingId ? t('myListings.editListing') : t('myListings.createNewListing')}</h2>
           <p className="subtitle" style={{ textAlign: 'left', marginBottom: '1.5rem' }}>
-            {editingId ? 'Update your crop details' : 'List your crops for buyers'}
+            {editingId ? t('myListings.updateSubtitle') : t('myListings.createSubtitle')}
           </p>
 
           <form onSubmit={handleSubmit}>
             <div className="form-group">
-              <label>Crop Name *</label>
+              <label>{t('myListings.cropName')}</label>
               <input type="text" name="cropName" value={formData.cropName} onChange={handleChange} required />
             </div>
             
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
               <div className="form-group">
-                <label>Quantity (kg) *</label>
+                <label>{t('myListings.quantity')}</label>
                 <input type="number" name="quantity" value={formData.quantity} onChange={handleChange} required />
               </div>
               <div className="form-group">
-                <label>Price per kg (₹) *</label>
+                <label>{t('myListings.price')}</label>
                 <input type="number" name="price" value={formData.price} onChange={handleChange} required />
               </div>
             </div>
 
             <div className="form-group">
-              <label>Location *</label>
+              <label>{t('myListings.location')}</label>
               <input type="text" name="location" value={formData.location} onChange={handleChange} required />
             </div>
 
             <div className="form-group">
-              <label>Description (Optional)</label>
+              <label>{t('myListings.description')}</label>
               <textarea 
                 name="description" 
                 value={formData.description} 
@@ -158,15 +170,15 @@ const MyListings = () => {
             </div>
 
             <div className="form-group">
-              <label>Crop Image (Optional)</label>
+              <label>{t('myListings.cropImage')}</label>
               <input type="file" accept="image/*" onChange={handleImageChange} style={{ padding: '0.5rem' }} />
               {formData.image && <img src={formData.image} alt="Preview" style={{ marginTop: '1rem', width: '100%', maxHeight: '150px', objectFit: 'cover', borderRadius: '8px' }} />}
             </div>
 
             <div style={{ display: 'flex', gap: '1rem' }}>
-              <button type="submit" className="btn" style={{ flex: 1 }}>{editingId ? 'Update Listing' : 'Post Listing'}</button>
+              <button type="submit" className="btn" style={{ flex: 1 }}>{editingId ? t('myListings.updateBtn') : t('myListings.postBtn')}</button>
               {editingId && (
-                <button type="button" className="btn" style={{ flex: 1, background: 'var(--error)' }} onClick={cancelEdit}>Cancel</button>
+                <button type="button" className="btn" style={{ flex: 1, background: 'var(--error)' }} onClick={cancelEdit}>{t('myListings.cancelBtn')}</button>
               )}
             </div>
           </form>
@@ -174,12 +186,12 @@ const MyListings = () => {
 
         {/* Listings Section */}
         <div>
-          <h2 style={{ marginBottom: '1.5rem' }}>My Listed Crops</h2>
+          <h2 style={{ marginBottom: '1.5rem' }}>{t('myListings.myListedCrops')}</h2>
           {loading ? (
-            <p>Loading...</p>
+            <p>{t('myListings.loading')}</p>
           ) : listings.length === 0 ? (
             <div className="glass-panel" style={{ margin: 0, maxWidth: '100%', textAlign: 'center', padding: '3rem' }}>
-              You haven't listed any crops yet.
+              {t('myListings.noCropsYet')}
             </div>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1.5rem' }}>
@@ -193,7 +205,7 @@ const MyListings = () => {
                   </div>
                   <div>
                     <button className="btn" style={{ padding: '0.5rem 1.5rem', margin: 0 }} onClick={() => startEdit(crop)}>
-                      Edit
+                      {t('myListings.editBtn')}
                     </button>
                   </div>
                 </div>

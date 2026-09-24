@@ -1,11 +1,13 @@
 import { useState, useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 
 const Signup = () => {
+  const { t } = useTranslation();
   const [formData, setFormData] = useState({
     name: '',
-    email: '',
+    phoneNumber: '',
     password: '',
     role: 'Farmer' // default
   });
@@ -24,12 +26,12 @@ const Signup = () => {
     e.preventDefault();
     setError('');
     
-    if (!formData.name || !formData.email || !formData.password || !formData.role) {
+    if (!formData.name || !formData.phoneNumber || !formData.password || !formData.role) {
       setError('Please fill in all fields');
       return;
     }
 
-    const res = await signup(formData.name, formData.email, formData.password, formData.role);
+    const res = await signup(formData.name, formData.phoneNumber, formData.password, formData.role);
     if (res.success) {
       navigate('/dashboard');
     } else {
@@ -40,58 +42,58 @@ const Signup = () => {
   return (
     <div className="page-wrapper">
       <div className="glass-panel">
-        <h1>Create Account</h1>
-        <p className="subtitle">Join the Digital APMC platform today</p>
+        <h1>{t('auth.createAccount')}</h1>
+        <p className="subtitle">{t('auth.joinPlatform')}</p>
         
         {error && <div className="error-message">{error}</div>}
         
         <form onSubmit={handleSubmit}>
           <div className="form-group">
-            <label>Full Name</label>
+            <label>{t('auth.fullName')}</label>
             <input 
               type="text" 
               name="name"
-              placeholder="Enter your full name" 
+              placeholder={t('auth.namePlaceholder')} 
               value={formData.name}
               onChange={handleChange}
             />
           </div>
 
           <div className="form-group">
-            <label>Email Address</label>
+            <label>{t('auth.phone')}</label>
             <input 
-              type="email" 
-              name="email"
-              placeholder="Enter your email" 
-              value={formData.email}
+              type="tel" 
+              name="phoneNumber"
+              placeholder={t('auth.phonePlaceholder')} 
+              value={formData.phoneNumber}
               onChange={handleChange}
             />
           </div>
           
           <div className="form-group">
-            <label>Password</label>
+            <label>{t('auth.password')}</label>
             <input 
               type="password" 
               name="password"
-              placeholder="Create a strong password" 
+              placeholder={t('auth.passwordPlaceholderSignup')} 
               value={formData.password}
               onChange={handleChange}
             />
           </div>
 
           <div className="form-group">
-            <label>I am a</label>
+            <label>{t('auth.iAmA')}</label>
             <select name="role" value={formData.role} onChange={handleChange}>
-              <option value="Farmer">Farmer</option>
-              <option value="Business Owner">Business Owner</option>
+              <option value="Farmer">{t('auth.farmer')}</option>
+              <option value="Business Owner">{t('auth.businessOwner')}</option>
             </select>
           </div>
           
-          <button type="submit" className="btn">Sign Up</button>
+          <button type="submit" className="btn">{t('auth.signUpBtn')}</button>
         </form>
         
         <div className="form-footer">
-          Already have an account? <Link to="/login">Sign in</Link>
+          {t('auth.haveAccount')} <Link to="/login">{t('auth.signInLink')}</Link>
         </div>
       </div>
     </div>

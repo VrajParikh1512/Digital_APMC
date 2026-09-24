@@ -1,9 +1,11 @@
 import { useState, useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 
 const Login = () => {
-  const [email, setEmail] = useState('');
+  const { t } = useTranslation();
+  const [phoneNumber, setPhoneNumber] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const { login } = useContext(AuthContext);
@@ -13,12 +15,12 @@ const Login = () => {
     e.preventDefault();
     setError('');
     
-    if (!email || !password) {
+    if (!phoneNumber || !password) {
       setError('Please fill in all fields');
       return;
     }
 
-    const res = await login(email, password);
+    const res = await login(phoneNumber, password);
     if (res.success) {
       navigate('/dashboard');
     } else {
@@ -29,37 +31,37 @@ const Login = () => {
   return (
     <div className="page-wrapper">
       <div className="glass-panel">
-        <h1>Welcome Back</h1>
-        <p className="subtitle">Sign in to your Digital APMC account</p>
+        <h1>{t('auth.welcomeBack')}</h1>
+        <p className="subtitle">{t('auth.signInSubtitle')}</p>
         
         {error && <div className="error-message">{error}</div>}
         
         <form onSubmit={handleSubmit}>
           <div className="form-group">
-            <label>Email Address</label>
+            <label>{t('auth.phone')}</label>
             <input 
-              type="email" 
-              placeholder="Enter your email" 
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              type="tel" 
+              placeholder={t('auth.phonePlaceholder')} 
+              value={phoneNumber}
+              onChange={(e) => setPhoneNumber(e.target.value)}
             />
           </div>
           
           <div className="form-group">
-            <label>Password</label>
+            <label>{t('auth.password')}</label>
             <input 
               type="password" 
-              placeholder="Enter your password" 
+              placeholder={t('auth.passwordPlaceholderLogin')} 
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />
           </div>
           
-          <button type="submit" className="btn">Sign In</button>
+          <button type="submit" className="btn">{t('auth.signInBtn')}</button>
         </form>
         
         <div className="form-footer">
-          Don't have an account? <Link to="/signup">Create one</Link>
+          {t('auth.noAccount')} <Link to="/signup">{t('auth.createOne')}</Link>
         </div>
       </div>
     </div>
