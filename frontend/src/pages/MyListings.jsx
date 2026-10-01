@@ -2,6 +2,7 @@ import { useState, useEffect, useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import { Navigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import cropPlaceholder from '../assets/crop_placeholder.jpg';
 
 const MyListings = () => {
   const { user, logout } = useContext(AuthContext);
@@ -197,7 +198,7 @@ const MyListings = () => {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1.5rem' }}>
               {listings.map(crop => (
                 <div key={crop._id} className="glass-panel" style={{ margin: 0, maxWidth: '100%', padding: '1.5rem', display: 'flex', gap: '1.5rem', alignItems: 'center' }}>
-                  <img src={crop.image} alt={crop.cropName} style={{ width: '120px', height: '120px', objectFit: 'cover', borderRadius: '12px' }} />
+                  <img src={crop.image || cropPlaceholder} alt={crop.cropName} style={{ width: '120px', height: '120px', objectFit: 'cover', borderRadius: '12px' }} />
                   <div style={{ flex: 1 }}>
                     <h3 style={{ fontSize: '1.25rem', color: 'var(--primary)' }}>{crop.cropName}</h3>
                     <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '0.5rem' }}>{crop.location}</p>

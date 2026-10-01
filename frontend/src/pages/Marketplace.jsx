@@ -2,6 +2,7 @@ import { useState, useEffect, useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import { Navigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import cropPlaceholder from '../assets/crop_placeholder.jpg';
 
 const Marketplace = () => {
   const { user, logout } = useContext(AuthContext);
@@ -87,8 +88,8 @@ const Marketplace = () => {
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '2rem' }}>
             {crops.map(crop => (
-              <div key={crop._id} className="glass-panel" style={{ padding: 0, overflow: 'hidden', maxWidth: '100%', margin: 0, animation: 'none' }}>
-                <div style={{ height: '200px', width: '100%', backgroundImage: `url(${crop.image})`, backgroundSize: 'cover', backgroundPosition: 'center' }}></div>
+              <div key={crop._id} className="glass-panel crop-card" style={{ padding: 0, overflow: 'hidden', maxWidth: '100%', margin: 0, animation: 'none' }}>
+                <div className="crop-img" style={{ height: '200px', width: '100%', backgroundImage: `url(${crop.image || cropPlaceholder})`, backgroundSize: 'cover', backgroundPosition: 'center', transition: 'transform 0.4s ease' }}></div>
                 <div style={{ padding: '1.5rem' }}>
                   <h3 style={{ fontSize: '1.25rem', marginBottom: '0.5rem' }}>{crop.cropName}</h3>
                   <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '1rem' }}>{crop.location}</p>

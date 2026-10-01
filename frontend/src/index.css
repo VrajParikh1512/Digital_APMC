@@ -1,12 +1,12 @@
 :root {
-  --primary: #10b981; /* Premium Emerald */
-  --primary-dark: #059669;
-  --secondary: #3b82f6; /* Blue for business */
-  --bg-dark: #0f172a; /* Slate dark */
-  --bg-card: rgba(30, 41, 59, 0.7); /* Glassmorphism base */
+  --primary: #22c55e; /* Vibrant Crop Green */
+  --primary-dark: #16a34a;
+  --secondary: #eab308; /* Golden Harvest */
+  --bg-dark: #1a1c18; /* Earthy Dark Green/Brown */
+  --bg-card: rgba(26, 28, 24, 0.75); /* Glassmorphism base */
   --text-main: #f8fafc;
-  --text-muted: #94a3b8;
-  --border-color: rgba(255, 255, 255, 0.1);
+  --text-muted: #a1a1aa;
+  --border-color: rgba(167, 243, 208, 0.15); /* Greenish hint */
   --error: #ef4444;
 }
 
@@ -21,13 +21,11 @@ body {
   background-color: var(--bg-dark);
   color: var(--text-main);
   min-height: 100vh;
-  /* Premium dark background with subtle mesh gradient */
-  background-image: 
-    radial-gradient(at 0% 0%, hsla(253,16%,7%,1) 0, transparent 50%), 
-    radial-gradient(at 50% 0%, hsla(225,39%,30%,0.2) 0, transparent 50%), 
-    radial-gradient(at 100% 0%, hsla(163,89%,35%,0.15) 0, transparent 50%);
+  /* Premium farm background image */
+  background-image: linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)), url('./assets/hero_bg.jpg');
   background-attachment: fixed;
   background-size: cover;
+  background-position: center;
   display: flex;
   flex-direction: column;
 }
@@ -186,4 +184,18 @@ p.subtitle {
   align-items: center;
   justify-content: center;
   padding: 2rem;
+}
+
+/* Crop Card Hover Effects */
+.crop-card {
+  transition: transform 0.3s ease, box-shadow 0.3s ease !important;
+}
+
+.crop-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 15px 30px -10px rgba(0, 0, 0, 0.7);
+}
+
+.crop-card:hover .crop-img {
+  transform: scale(1.05);
 }
