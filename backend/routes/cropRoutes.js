@@ -25,8 +25,46 @@ router.get('/', protect, async (req, res) => {
       query.farmer = farmerId;
     }
 
-    const crops = await Crop.find(query).populate('farmer', 'name email');
+    const crops = await Crop.find(query).populate('farmer', 'name phoneNumber');
     res.json(crops);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// @desc    Get crops requiring verification notifications
+// @route   GET /api/crops/notifications/pending
+// @access  Public (Internal Microservice)
+router.get('/notifications/pending', async (req, res) => {
+  try {
+    const oneWeekAgo = new Date();
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+
+    const staleCrops = await Crop.find({
+      updatedAt: { $lte: oneWeekAgo },
+      $or: [
+        { lastNotificationSentAt: null },
+        { $expr: { $lt: ["$lastNotificationSentAt", "$updatedAt"] } }
+      ]
+    }).populate('farmer', 'name phoneNumber');
+
+    res.json(staleCrops);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// @desc    Mark a crop's notification as sent
+// @route   PUT /api/crops/notifications/mark-sent
+// @access  Public (Internal Microservice)
+router.put('/notifications/mark-sent', async (req, res) => {
+  try {
+    const { cropIds } = req.body;
+    await Crop.updateMany(
+      { _id: { $in: cropIds } },
+      { $set: { lastNotificationSentAt: new Date() } }
+    );
+    res.json({ message: 'Notifications marked as sent' });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
@@ -79,7 +117,7 @@ router.put('/:id', protect, farmerOnly, async (req, res) => {
     crop.price = price || crop.price;
     crop.location = location || crop.location;
     crop.description = description || crop.description;
-    
+
     if (image) {
       crop.image = image;
     }

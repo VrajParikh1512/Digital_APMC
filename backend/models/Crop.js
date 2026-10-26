@@ -28,6 +28,10 @@ const cropSchema = new mongoose.Schema({
   image: {
     type: String, // Will store base64 string or URL
     default: 'https://images.unsplash.com/photo-1574943320219-553eb213f72d?auto=format&fit=crop&q=80&w=800' // default crop image
+  },
+  lastNotificationSentAt: {
+    type: Date,
+    default: null
   }
 }, { timestamps: true });
 

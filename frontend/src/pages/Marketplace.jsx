@@ -9,6 +9,7 @@ const Marketplace = () => {
   const { t } = useTranslation();
   const [crops, setCrops] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [activeContactId, setActiveContactId] = useState(null);
   
   // Filters
   const [search, setSearch] = useState('');
@@ -105,9 +106,26 @@ const Marketplace = () => {
 
                   <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '1rem', marginTop: 'auto' }}>
                     <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>{t('marketplace.farmer')}: {crop.farmer?.name}</p>
-                    <button className="btn" style={{ padding: '0.5rem' }} onClick={() => alert(`Contacting ${crop.farmer?.name} at ${crop.farmer?.phoneNumber}`)}>
-                      {t('marketplace.contactFarmer')}
-                    </button>
+                    
+                    {activeContactId === crop._id ? (
+                      <div style={{ marginTop: '0.5rem', padding: '0.75rem', background: 'var(--bg-card)', borderRadius: '8px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <strong style={{ color: 'var(--primary)', fontSize: '0.9rem' }}>Contact Info</strong>
+                          <button 
+                            style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '0.8rem', padding: '0' }}
+                            onClick={() => setActiveContactId(null)}
+                          >
+                            Close
+                          </button>
+                        </div>
+                        <span style={{ fontSize: '0.9rem' }}>{crop.farmer?.name}</span>
+                        <span style={{ fontSize: '0.9rem', fontWeight: 'bold' }}>{crop.farmer?.phoneNumber || 'No phone number available'}</span>
+                      </div>
+                    ) : (
+                      <button className="btn" style={{ padding: '0.5rem' }} onClick={() => setActiveContactId(crop._id)}>
+                        {t('marketplace.contactFarmer')}
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
