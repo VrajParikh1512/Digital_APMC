@@ -4,6 +4,7 @@ import cors from 'cors';
 import mongoose from 'mongoose';
 import authRoutes from './routes/authRoutes.js';
 import cropRoutes from './routes/cropRoutes.js';
+import marketPriceRoutes from './routes/marketPriceRoutes.js';
 
 dotenv.config();
 
@@ -17,6 +18,7 @@ app.use(express.json({ limit: '10mb' }));
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/crops', cropRoutes);
+app.use('/api/market-prices', marketPriceRoutes);
 
 // Database Connection
 const connectDB = async () => {

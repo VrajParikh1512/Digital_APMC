@@ -6,3 +6,7 @@ node_modules
 
 # Build output (for Vite frontend)
 dist/
+
+# AGMARKNET CSV data files (too large for GitHub — keep locally, import via script)
+agmarknet_cleaned/*.csv
+agmarknet_cleaned/log_*.csv

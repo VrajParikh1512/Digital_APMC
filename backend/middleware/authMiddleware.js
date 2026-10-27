@@ -38,3 +38,11 @@ export const businessOwnerOnly = (req, res, next) => {
       res.status(403).json({ message: 'Not authorized, Business Owners only' });
     }
   };
+
+export const adminOnly = (req, res, next) => {
+  if (req.user && req.user.role === 'Admin') {
+    next();
+  } else {
+    res.status(403).json({ message: 'Not authorized, Admins only' });
+  }
+};

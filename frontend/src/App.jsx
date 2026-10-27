@@ -7,6 +7,8 @@ import Login from './pages/Login';
 import Signup from './pages/Signup';
 import Marketplace from './pages/Marketplace';
 import MyListings from './pages/MyListings';
+import PriceHistory from './pages/PriceHistory';
+import AdminPanel from './pages/AdminPanel';
 
 const Navbar = () => {
   const { user, logout } = useContext(AuthContext);
@@ -44,6 +46,12 @@ const Navbar = () => {
             )}
             {user.role === 'Farmer' && (
               <Link to="/my-listings" style={{ color: 'white', textDecoration: 'none', fontWeight: 500 }}>{t('navbar.myListings')}</Link>
+            )}
+            {user.role === 'Farmer' && (
+              <Link to="/price-history" style={{ color: 'white', textDecoration: 'none', fontWeight: 500 }}>{t('navbar.priceHistory')}</Link>
+            )}
+            {user.role === 'Admin' && (
+              <Link to="/admin" style={{ color: 'white', textDecoration: 'none', fontWeight: 500 }}>{t('navbar.adminPanel')}</Link>
             )}
             <span style={{ color: 'var(--text-muted)' }}>{user.name} ({user.role})</span>
             <button className="btn" style={{ padding: '0.4rem 1rem', marginTop: 0 }} onClick={logout}>
@@ -101,6 +109,8 @@ function App() {
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/marketplace" element={<Marketplace />} />
         <Route path="/my-listings" element={<MyListings />} />
+        <Route path="/price-history" element={<PriceHistory />} />
+        <Route path="/admin" element={<AdminPanel />} />
         <Route path="/" element={<Navigate to="/dashboard" />} />
       </Routes>
     </Router>

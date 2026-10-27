@@ -44,7 +44,7 @@ router.get('/notifications/pending', async (req, res) => {
       updatedAt: { $lte: oneWeekAgo },
       $or: [
         { lastNotificationSentAt: null },
-        { $expr: { $lt: ["$lastNotificationSentAt", "$updatedAt"] } }
+        { lastNotificationSentAt: { $lte: oneWeekAgo } }
       ]
     }).populate('farmer', 'name phoneNumber');
 

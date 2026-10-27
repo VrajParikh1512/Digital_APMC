@@ -95,6 +95,6 @@ const runNotificationJob = async () => {
 };
 
 // Schedule to run every day at 06:00 AM
-cron.schedule('* * * * *', runNotificationJob);
+cron.schedule('0 6 * * *', runNotificationJob);
 
 console.log('Notification Microservice started. Cron job scheduled for 06:00 AM daily.');
