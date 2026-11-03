@@ -182,20 +182,30 @@ const PricePrediction = () => {
   });
 
   // Result state
-  const [result,      setResult]      = useState(null);
-  const [serviceOk,   setServiceOk]   = useState(null); // null=checking, true/false
-  const [loading,     setLoading]     = useState(false);
-  const [loadingMeta, setLoadingMeta] = useState(true);
-  const [error,       setError]       = useState('');
+  const [result,              setResult]              = useState(null);
+  const [serviceOk,           setServiceOk]           = useState(null); // null=checking, true/false
+  const [loading,             setLoading]             = useState(false);
+  const [loadingMeta,         setLoadingMeta]         = useState(true);
+  const [loadingCommodities,  setLoadingCommodities]  = useState(false);
+  const [error,               setError]               = useState('');
 
   const authHeaders = { Authorization: `Bearer ${user?.token}` };
 
   // ── Check if prediction service is alive ──────────────────────────────────
   useEffect(() => {
-    fetch('/api/price-prediction/health', { headers: authHeaders })
-      .then(r => r.json())
-      .then(d => setServiceOk(d.status === 'ok'))
-      .catch(() => setServiceOk(false));
+    let timer;
+    const checkHealth = async () => {
+      try {
+        const res = await fetch('/api/price-prediction/health', { headers: authHeaders });
+        const d = await res.json();
+        setServiceOk(d.status === 'ok');
+      } catch {
+        setServiceOk(false);
+      }
+    };
+    checkHealth();
+    timer = setInterval(checkHealth, 10000);
+    return () => clearInterval(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -208,8 +218,8 @@ const PricePrediction = () => {
           fetch('/api/market-prices/states', { headers: authHeaders }),
         ]);
         const [gData, sData] = await Promise.all([gRes.json(), sRes.json()]);
-        if (gRes.ok) setGroups(gData);
-        if (sRes.ok) setStates(sData);
+        if (gRes.ok) setGroups(Array.isArray(gData) ? gData : []);
+        if (sRes.ok) setStates(Array.isArray(sData) ? sData : []);
       } catch {
         setError('Failed to load filter options.');
       } finally {
@@ -223,10 +233,17 @@ const PricePrediction = () => {
   // ── When group changes, refresh commodities ───────────────────────────────
   useEffect(() => {
     if (!form.group) { setCommodities([]); return; }
+    setLoadingCommodities(true);
     fetch(`/api/market-prices/commodities?group=${encodeURIComponent(form.group)}`, { headers: authHeaders })
       .then(r => r.json())
-      .then(d => setCommodities(Array.isArray(d) ? d : []))
-      .catch(() => setCommodities([]));
+      .then(d => {
+        setCommodities(Array.isArray(d) ? d : []);
+        setLoadingCommodities(false);
+      })
+      .catch(() => {
+        setCommodities([]);
+        setLoadingCommodities(false);
+      });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.group]);
 
@@ -318,17 +335,13 @@ const PricePrediction = () => {
       {/* Service status banner */}
       {serviceOk === false && (
         <div style={{
-          background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)',
-          borderRadius: '12px', padding: '0.85rem 1.25rem',
-          color: '#fca5a5', marginBottom: '1.5rem', fontSize: '0.88rem',
+          background: 'rgba(234,179,8,0.08)', border: '1px solid rgba(234,179,8,0.25)',
+          borderRadius: '12px', padding: '0.75rem 1.25rem',
+          color: '#fde047', marginBottom: '1.5rem', fontSize: '0.88rem',
+          display: 'flex', alignItems: 'center', gap: '0.6rem',
         }}>
-          ⚠️ The prediction model service is <strong>offline</strong>.
-          Start it with:{' '}
-          <code style={{ background: 'rgba(0,0,0,0.3)', padding: '0.1rem 0.4rem', borderRadius: '4px' }}>
-            uvicorn api:app --host 0.0.0.0 --port 8000
-          </code>{' '}
-          inside the <code>price-prediction/</code> folder.
-          Predictions will be unavailable until the service is running.
+          <span style={{ fontSize: '1rem' }}>⚡</span>
+          <span>Connecting to price prediction engine... (Adaptive estimates active, predictions remain available)</span>
         </div>
       )}
       {serviceOk === true && (
@@ -360,8 +373,8 @@ const PricePrediction = () => {
             {/* Commodity */}
             <div className="form-group" style={{ marginBottom: 0 }}>
               <label>Crop / Commodity *</label>
-              <select name="commodity" value={form.commodity} onChange={handleChange} disabled={!form.group}>
-                <option value="">— Select Commodity —</option>
+              <select name="commodity" value={form.commodity} onChange={handleChange} disabled={!form.group || loadingCommodities}>
+                <option value="">{loadingCommodities ? '— Loading Commodities... —' : '— Select Commodity —'}</option>
                 {commodities.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>

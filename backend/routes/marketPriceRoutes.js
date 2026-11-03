@@ -5,6 +5,17 @@ import { runImport } from '../scripts/importMarketPrices.js';
 
 const router = express.Router();
 
+// ─── Fast In-Memory Metadata Cache ──────────────────────────────────────────
+let cachedGroups = null;
+let cachedStates = null;
+const cachedCommoditiesByGroup = new Map();
+
+export function clearPriceCache() {
+  cachedGroups = null;
+  cachedStates = null;
+  cachedCommoditiesByGroup.clear();
+}
+
 // ─── Public-to-Authenticated (any logged-in role) ────────────────────────────
 
 // @desc    Get distinct commodity groups
@@ -12,8 +23,12 @@ const router = express.Router();
 // @access  Protected
 router.get('/groups', protect, async (req, res) => {
   try {
+    if (cachedGroups && cachedGroups.length > 0) {
+      return res.json(cachedGroups);
+    }
     const groups = await MarketPrice.distinct('commodity_group');
-    res.json(groups.filter(Boolean).sort());
+    cachedGroups = groups.filter(Boolean).sort();
+    res.json(cachedGroups);
   } catch (err) {
     res.status(500).json({ message: 'Server error', error: err.message });
   }
@@ -24,9 +39,21 @@ router.get('/groups', protect, async (req, res) => {
 // @access  Protected
 router.get('/commodities', protect, async (req, res) => {
   try {
-    const match = req.query.group ? { commodity_group: req.query.group } : {};
+    const rawGroup = req.query.group ? req.query.group.trim() : '';
+    const cacheKey = rawGroup || '__ALL__';
+
+    if (cachedCommoditiesByGroup.has(cacheKey)) {
+      return res.json(cachedCommoditiesByGroup.get(cacheKey));
+    }
+
+    const match = rawGroup ? { commodity_group: rawGroup } : {};
     const commodities = await MarketPrice.distinct('commodity', match);
-    res.json(commodities.filter(Boolean).sort());
+    const sorted = commodities.filter(Boolean).sort();
+    
+    if (sorted.length > 0) {
+      cachedCommoditiesByGroup.set(cacheKey, sorted);
+    }
+    res.json(sorted);
   } catch (err) {
     res.status(500).json({ message: 'Server error', error: err.message });
   }
@@ -37,8 +64,12 @@ router.get('/commodities', protect, async (req, res) => {
 // @access  Protected
 router.get('/states', protect, async (req, res) => {
   try {
+    if (cachedStates && cachedStates.length > 0) {
+      return res.json(cachedStates);
+    }
     const states = await MarketPrice.distinct('state');
-    res.json(states.filter(Boolean).sort());
+    cachedStates = states.filter(Boolean).sort();
+    res.json(cachedStates);
   } catch (err) {
     res.status(500).json({ message: 'Server error', error: err.message });
   }
@@ -52,8 +83,8 @@ router.get('/states', protect, async (req, res) => {
 router.get('/stats', protect, adminOnly, async (req, res) => {
   try {
     const totalRows = await MarketPrice.countDocuments();
-    const groups    = await MarketPrice.distinct('commodity_group');
-    const states    = await MarketPrice.distinct('state');
+    const groups    = cachedGroups || await MarketPrice.distinct('commodity_group');
+    const states    = cachedStates || await MarketPrice.distinct('state');
     const oldest    = await MarketPrice.findOne({}, 'date').sort({ date: 1 }).lean();
     const newest    = await MarketPrice.findOne({}, 'date').sort({ date: -1 }).lean();
 
@@ -76,6 +107,7 @@ router.get('/stats', protect, adminOnly, async (req, res) => {
 // @access  Admin only
 router.post('/import', protect, adminOnly, async (req, res) => {
   try {
+    clearPriceCache();
     // Respond immediately — import runs in background
     res.status(202).json({ message: 'Import started in background. Check server logs for progress.' });
     // Fire-and-forget
@@ -90,6 +122,7 @@ router.post('/import', protect, adminOnly, async (req, res) => {
 // @access  Admin only
 router.delete('/', protect, adminOnly, async (req, res) => {
   try {
+    clearPriceCache();
     const result = await MarketPrice.deleteMany({});
     res.json({ message: `Deleted ${result.deletedCount.toLocaleString()} records.` });
   } catch (err) {
@@ -112,7 +145,7 @@ router.get('/', protect, farmerOnly, async (req, res) => {
 
     // Build match stage
     const match = {
-      commodity: { $regex: new RegExp(`^${commodity.trim()}$`, 'i') },
+      commodity: commodity.trim(),
     };
     if (startDate || endDate) {
       match.date = {};
@@ -120,7 +153,7 @@ router.get('/', protect, farmerOnly, async (req, res) => {
       if (endDate)   match.date.$lte = new Date(endDate);
     }
     if (state) {
-      match.state = { $regex: new RegExp(`^${state.trim()}$`, 'i') };
+      match.state = state.trim();
     }
 
     // Aggregate: one record per calendar day (average across all markets/districts)

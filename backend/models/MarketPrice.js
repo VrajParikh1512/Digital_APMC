@@ -19,6 +19,9 @@ const marketPriceSchema = new mongoose.Schema({
 // Compound indexes for the most common query patterns
 marketPriceSchema.index({ commodity: 1, date: 1 });
 marketPriceSchema.index({ commodity: 1, state: 1, date: 1 });
+marketPriceSchema.index({ commodity_group: 1, commodity: 1 });
+marketPriceSchema.index({ state: 1, district: 1 });
+marketPriceSchema.index({ state: 1, district: 1, market: 1 });
 
 const MarketPrice = mongoose.model('MarketPrice', marketPriceSchema);
 

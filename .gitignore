@@ -9,3 +9,6 @@ dist/
 
 # AGMARKNET raw data folder (too large for GitHub — keep locally, import via script)
 agmarknet-data/
+
+__pycache__/
+*.pyc
