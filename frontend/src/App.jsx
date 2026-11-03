@@ -8,6 +8,7 @@ import Signup from './pages/Signup';
 import Marketplace from './pages/Marketplace';
 import MyListings from './pages/MyListings';
 import PriceHistory from './pages/PriceHistory';
+import PricePrediction from './pages/PricePrediction';
 import AdminPanel from './pages/AdminPanel';
 
 const Navbar = () => {
@@ -49,6 +50,11 @@ const Navbar = () => {
             )}
             {user.role === 'Farmer' && (
               <Link to="/price-history" style={{ color: 'white', textDecoration: 'none', fontWeight: 500 }}>{t('navbar.priceHistory')}</Link>
+            )}
+            {user.role === 'Farmer' && (
+              <Link to="/price-prediction" style={{ color: 'white', textDecoration: 'none', fontWeight: 500 }}>
+                🔮 {t('navbar.pricePrediction', 'Price Prediction')}
+              </Link>
             )}
             {user.role === 'Admin' && (
               <Link to="/admin" style={{ color: 'white', textDecoration: 'none', fontWeight: 500 }}>{t('navbar.adminPanel')}</Link>
@@ -104,14 +110,15 @@ function App() {
     <Router>
       <Navbar />
       <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="/signup" element={<Signup />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/marketplace" element={<Marketplace />} />
-        <Route path="/my-listings" element={<MyListings />} />
-        <Route path="/price-history" element={<PriceHistory />} />
-        <Route path="/admin" element={<AdminPanel />} />
-        <Route path="/" element={<Navigate to="/dashboard" />} />
+        <Route path="/login"            element={<Login />} />
+        <Route path="/signup"           element={<Signup />} />
+        <Route path="/dashboard"        element={<Dashboard />} />
+        <Route path="/marketplace"      element={<Marketplace />} />
+        <Route path="/my-listings"      element={<MyListings />} />
+        <Route path="/price-history"    element={<PriceHistory />} />
+        <Route path="/price-prediction" element={<PricePrediction />} />
+        <Route path="/admin"            element={<AdminPanel />} />
+        <Route path="/"                 element={<Navigate to="/dashboard" />} />
       </Routes>
     </Router>
   );

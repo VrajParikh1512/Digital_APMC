@@ -5,6 +5,7 @@ import mongoose from 'mongoose';
 import authRoutes from './routes/authRoutes.js';
 import cropRoutes from './routes/cropRoutes.js';
 import marketPriceRoutes from './routes/marketPriceRoutes.js';
+import pricePredictionRoutes from './routes/pricePredictionRoutes.js';
 
 dotenv.config();
 
@@ -19,6 +20,7 @@ app.use(express.json({ limit: '10mb' }));
 app.use('/api/auth', authRoutes);
 app.use('/api/crops', cropRoutes);
 app.use('/api/market-prices', marketPriceRoutes);
+app.use('/api/price-prediction', pricePredictionRoutes);
 
 // Database Connection
 const connectDB = async () => {

@@ -1,0 +1,7 @@
+# Trained model artifacts (large binary files)
+*.txt
+*.f32
+
+# Keep the directory in Git but ignore trained files
+!.gitkeep
+
