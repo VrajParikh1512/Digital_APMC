@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 const marketPriceSchema = new mongoose.Schema({
   state:           { type: String, index: true },
   district:        { type: String },
+  market:          { type: String },          // APMC / mandi name from raw CSV
   commodity_group: { type: String, index: true },
   commodity:       { type: String, index: true },
   date:            { type: Date,   index: true },
