@@ -2,6 +2,7 @@ import { useState, useEffect, useContext, useCallback } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import { Navigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { translateGroup, translateCommodity, translateState } from '../cropTranslations';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -19,15 +20,15 @@ const GROUPS = [
 
 // ─── Forecast Card ────────────────────────────────────────────────────────────
 
-const ForecastCard = ({ forecast, basePrice }) => {
+const ForecastCard = ({ forecast, basePrice, t }) => {
   const isUp         = forecast.predicted_change_pct > 0;
   const isFlat       = forecast.used_baseline_due_to_5pct_rule;
   const changeColor  = isFlat ? '#a1a1aa' : isUp ? '#22c55e' : '#f87171';
   const changePrefix = isUp ? '+' : '';
 
   const stepLabel = forecast.reporting_step === 1
-    ? 'Next Report'
-    : `+${forecast.reporting_step} Reports`;
+    ? t('pricePrediction.nextReport')
+    : t('pricePrediction.moreReports', { n: forecast.reporting_step });
 
   return (
     <div style={{
@@ -52,7 +53,7 @@ const ForecastCard = ({ forecast, basePrice }) => {
             background: 'rgba(250,204,21,0.1)', border: '1px solid rgba(250,204,21,0.25)',
             borderRadius: '6px', padding: '0.15rem 0.5rem', fontWeight: 600,
           }}>
-            Experimental
+            {t('pricePrediction.experimental')}
           </span>
         )}
         {forecast.recommended && !forecast.experimental && (
@@ -61,7 +62,7 @@ const ForecastCard = ({ forecast, basePrice }) => {
             background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.2)',
             borderRadius: '6px', padding: '0.15rem 0.5rem', fontWeight: 600,
           }}>
-            Recommended
+            {t('pricePrediction.recommended')}
           </span>
         )}
       </div>
@@ -70,21 +71,21 @@ const ForecastCard = ({ forecast, basePrice }) => {
       <div style={{ fontSize: '1.6rem', fontWeight: 700, color: '#f4f4f5', lineHeight: 1.15 }}>
         ₹{forecast.predicted_modal_price.toLocaleString('en-IN')}
         <span style={{ fontSize: '0.78rem', color: '#71717a', marginLeft: '0.4rem', fontWeight: 400 }}>
-          /Quintal
+          {t('pricePrediction.perQuintal')}
         </span>
       </div>
 
       {/* Change */}
       <div style={{ fontSize: '0.9rem', color: changeColor, fontWeight: 600 }}>
         {isFlat
-          ? '≈ No significant change (< 5%)'
+          ? t('pricePrediction.noChange')
           : `${changePrefix}${forecast.predicted_change_pct.toFixed(2)}% vs current`}
       </div>
 
       {/* Sub-detail */}
       {!isFlat && (
         <div style={{ fontSize: '0.75rem', color: '#52525b' }}>
-          Raw model output: ₹{forecast.raw_lightgbm_price.toLocaleString('en-IN')}
+          {t('pricePrediction.rawOutput')}: ₹{forecast.raw_lightgbm_price.toLocaleString('en-IN')}
         </div>
       )}
     </div>
@@ -163,7 +164,8 @@ const MiniChart = ({ history }) => {
 
 const PricePrediction = () => {
   const { user }   = useContext(AuthContext);
-  const { t }      = useTranslation();
+  const { t, i18n } = useTranslation();
+  const currentLang = i18n.resolvedLanguage || i18n.language || 'en';
 
   // Filter state
   const [groups,      setGroups]      = useState([]);
@@ -286,8 +288,8 @@ const PricePrediction = () => {
   // ── Submit ────────────────────────────────────────────────────────────────
   const handleSubmit = useCallback(async e => {
     e.preventDefault();
-    if (!form.commodity) { setError('Please select a commodity before predicting.'); return; }
-    if (!form.state)     { setError('Please select a state before predicting.');     return; }
+    if (!form.commodity) { setError(t('pricePrediction.selectCommodity')); return; }
+    if (!form.state)     { setError(t('pricePrediction.selectState'));     return; }
     setError('');
     setLoading(true);
     setResult(null);
@@ -313,7 +315,7 @@ const PricePrediction = () => {
       setLoading(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [form]);
+  }, [form, t]);
 
   if (!user || user.role !== 'Farmer') return <Navigate to="/dashboard" />;
 
@@ -324,10 +326,10 @@ const PricePrediction = () => {
       {/* Header */}
       <div style={{ marginBottom: '2rem' }}>
         <h1 style={{ textAlign: 'left', marginBottom: '0.4rem' }}>
-          🔮 Price Prediction
+          🔮 {t('pricePrediction.title')}
         </h1>
         <p className="subtitle" style={{ textAlign: 'left', marginBottom: 0 }}>
-          Price forecasts for the next 1–7 market reporting periods, based on recent mandi prices
+          {t('pricePrediction.subtitle')}
         </p>
       </div>
 
@@ -340,8 +342,8 @@ const PricePrediction = () => {
           display: 'flex', alignItems: 'center', gap: '0.5rem',
         }}>
           <span style={{ fontSize: '1rem' }}>✅</span>
-          LightGBM model is online and ready
-          {health.trained_through ? ` (trained through ${health.trained_through}).` : '.'}
+          {t('pricePrediction.modelOnline')}
+          {health.trained_through ? ` (${health.trained_through}).` : '.'}
         </div>
       )}
       {health && health.model_status !== 'trained' && (
@@ -354,8 +356,8 @@ const PricePrediction = () => {
           <span style={{ fontSize: '1rem' }}>⚡</span>
           <span>
             {health.model_status === 'fallback_mode'
-              ? 'No trained LightGBM model was found, so simple trend-based estimates are shown.'
-              : 'Connecting to the prediction engine… trend-based estimates are shown until it is ready.'}
+              ? t('pricePrediction.modelOffline')
+              : t('pricePrediction.modelConnecting')}
           </span>
         </div>
       )}
@@ -367,59 +369,59 @@ const PricePrediction = () => {
 
             {/* Commodity Group */}
             <div className="form-group" style={{ marginBottom: 0 }}>
-              <label>Commodity Group *</label>
+              <label>{t('pricePrediction.commodityGroup')}</label>
               <select name="group" value={form.group} onChange={handleChange} disabled={loadingMeta}>
-                <option value="">— Select Group —</option>
-                {groups.map(g => <option key={g} value={g}>{g}</option>)}
+                <option value="">{t('pricePrediction.selectGroup')}</option>
+                {groups.map(g => <option key={g} value={g}>{translateGroup(g, currentLang)}</option>)}
               </select>
             </div>
 
             {/* Commodity */}
             <div className="form-group" style={{ marginBottom: 0 }}>
-              <label>Crop / Commodity *</label>
+              <label>{t('pricePrediction.commodity')}</label>
               <select name="commodity" value={form.commodity} onChange={handleChange} disabled={!form.group || loadingCommodities}>
-                <option value="">{loadingCommodities ? '— Loading Commodities... —' : '— Select Commodity —'}</option>
-                {commodities.map(c => <option key={c} value={c}>{c}</option>)}
+                <option value="">{loadingCommodities ? t('pricePrediction.loadingCommodities') : t('pricePrediction.selectCommodityPlaceholder')}</option>
+                {commodities.map(c => <option key={c} value={c}>{translateCommodity(c, currentLang)}</option>)}
               </select>
             </div>
 
             {/* State */}
             <div className="form-group" style={{ marginBottom: 0 }}>
-              <label>State *</label>
+              <label>{t('pricePrediction.state')}</label>
               <select name="state" value={form.state} onChange={handleChange} disabled={loadingMeta}>
-                <option value="">— Select State —</option>
-                {states.map(s => <option key={s} value={s}>{s}</option>)}
+                <option value="">{t('pricePrediction.selectStatePlaceholder')}</option>
+                {states.map(s => <option key={s} value={s}>{translateState(s, currentLang)}</option>)}
               </select>
             </div>
 
             {/* District */}
             <div className="form-group" style={{ marginBottom: 0 }}>
-              <label>District <span style={{ color: '#71717a', fontWeight: 400 }}>(Optional)</span></label>
+              <label>{t('pricePrediction.district')} <span style={{ color: '#71717a', fontWeight: 400 }}>{t('pricePrediction.districtOptional')}</span></label>
               <select name="district" value={form.district} onChange={handleChange} disabled={!form.state}>
-                <option value="">— All Districts —</option>
+                <option value="">{t('pricePrediction.allDistricts')}</option>
                 {districts.map(d => <option key={d} value={d}>{d}</option>)}
               </select>
             </div>
 
             {/* Market */}
             <div className="form-group" style={{ marginBottom: 0 }}>
-              <label>Market / Mandi <span style={{ color: '#71717a', fontWeight: 400 }}>(Optional)</span></label>
+              <label>{t('pricePrediction.market')} <span style={{ color: '#71717a', fontWeight: 400 }}>{t('pricePrediction.marketOptional')}</span></label>
               <select name="market" value={form.market} onChange={handleChange} disabled={!form.state}>
-                <option value="">— All Markets —</option>
+                <option value="">{t('pricePrediction.allMarkets')}</option>
                 {markets.map(m => <option key={m} value={m}>{m}</option>)}
               </select>
             </div>
 
             {/* History window */}
             <div className="form-group" style={{ marginBottom: 0 }}>
-              <label>History Window (days)</label>
+              <label>{t('pricePrediction.historyWindow')}</label>
               <select name="history_days" value={form.history_days} onChange={handleChange}>
-                <option value={14}>14 days</option>
-                <option value={21}>21 days</option>
-                <option value={30}>30 days</option>
-                <option value={45}>45 days</option>
-                <option value={60}>60 days</option>
-                <option value={90}>90 days</option>
+                <option value={14}>{t('pricePrediction.days', { n: 14 })}</option>
+                <option value={21}>{t('pricePrediction.days', { n: 21 })}</option>
+                <option value={30}>{t('pricePrediction.days', { n: 30 })}</option>
+                <option value={45}>{t('pricePrediction.days', { n: 45 })}</option>
+                <option value={60}>{t('pricePrediction.days', { n: 60 })}</option>
+                <option value={90}>{t('pricePrediction.days', { n: 90 })}</option>
               </select>
             </div>
 
@@ -431,7 +433,7 @@ const PricePrediction = () => {
                 disabled={loading || !form.commodity || !form.state}
                 style={{ marginTop: 0, padding: '0.875rem 1.25rem', fontSize: '1rem', width: '100%' }}
               >
-                {loading ? 'Predicting…' : '🔮 Predict Price'}
+                {loading ? t('pricePrediction.predicting') : t('pricePrediction.predictBtn')}
               </button>
             </div>
           </div>
@@ -446,7 +448,7 @@ const PricePrediction = () => {
       {loading && (
         <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '3rem' }}>
           <div style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>🤖</div>
-          <p>Running price forecast…</p>
+          <p>{t('pricePrediction.loading')}</p>
         </div>
       )}
 
@@ -466,27 +468,27 @@ const PricePrediction = () => {
               display: 'flex', flexWrap: 'wrap', gap: '1.5rem', alignItems: 'center',
             }}>
               <div>
-                <div style={{ fontSize: '0.75rem', color: '#71717a', marginBottom: '0.2rem' }}>Commodity</div>
-                <div style={{ fontWeight: 700, color: '#f4f4f5' }}>{result.commodity}</div>
+                <div style={{ fontSize: '0.75rem', color: '#71717a', marginBottom: '0.2rem' }}>{t('pricePrediction.summaryLabel_commodity')}</div>
+                <div style={{ fontWeight: 700, color: '#f4f4f5' }}>{translateCommodity(result.commodity, currentLang)}</div>
               </div>
               <div>
-                <div style={{ fontSize: '0.75rem', color: '#71717a', marginBottom: '0.2rem' }}>Location</div>
+                <div style={{ fontSize: '0.75rem', color: '#71717a', marginBottom: '0.2rem' }}>{t('pricePrediction.summaryLabel_location')}</div>
                 <div style={{ fontWeight: 600, color: '#a1a1aa', fontSize: '0.9rem' }}>
-                  {result.state}
+                  {translateState(result.state, currentLang)}
                   {result.district && result.district !== 'Unknown' ? ` · ${result.district}` : ''}
                   {result.market   && result.market   !== 'Unknown' ? ` · ${result.market}` : ''}
                 </div>
               </div>
               <div>
-                <div style={{ fontSize: '0.75rem', color: '#71717a', marginBottom: '0.2rem' }}>Last Observed Price</div>
+                <div style={{ fontSize: '0.75rem', color: '#71717a', marginBottom: '0.2rem' }}>{t('pricePrediction.summaryLabel_lastPrice')}</div>
                 <div style={{ fontWeight: 700, color: '#22c55e', fontSize: '1.1rem' }}>
                   ₹{basePrice?.toLocaleString('en-IN')} <span style={{ fontSize: '0.75rem', color: '#71717a' }}>on {lastDate}</span>
                 </div>
               </div>
               <div>
-                <div style={{ fontSize: '0.75rem', color: '#71717a', marginBottom: '0.2rem' }}>History Used</div>
+                <div style={{ fontSize: '0.75rem', color: '#71717a', marginBottom: '0.2rem' }}>{t('pricePrediction.summaryLabel_history')}</div>
                 <div style={{ fontWeight: 600, color: '#a1a1aa', fontSize: '0.9rem' }}>
-                  {history.length} data points
+                  {history.length} {t('pricePrediction.dataPoints')}
                 </div>
               </div>
               <div style={{ marginLeft: 'auto' }}>
@@ -505,7 +507,7 @@ const PricePrediction = () => {
               <div className="glass-panel" style={{ maxWidth: '100%', margin: '0 0 1.5rem', padding: '1.25rem 1.75rem' }}>
                 <h3 style={{ fontSize: '1rem', fontWeight: 600, margin: '0 0 0.85rem',
                              color: '#86efac' }}>
-                  Recent Price History
+                  {t('pricePrediction.recentHistory')}
                 </h3>
                 <MiniChart history={history} />
               </div>
@@ -518,7 +520,7 @@ const PricePrediction = () => {
                 background: 'linear-gradient(to right, #34d399, #10b981)',
                 WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
               }}>
-                Price Forecasts
+                {t('pricePrediction.forecasts')}
               </h3>
               <div style={{
                 display: 'grid',
@@ -526,7 +528,7 @@ const PricePrediction = () => {
                 gap: '1rem',
               }}>
                 {forecasts.map(f => (
-                  <ForecastCard key={f.reporting_step} forecast={f} basePrice={basePrice} />
+                  <ForecastCard key={f.reporting_step} forecast={f} basePrice={basePrice} t={t} />
                 ))}
               </div>
             </div>

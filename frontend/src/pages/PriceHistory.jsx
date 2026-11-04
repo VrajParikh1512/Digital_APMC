@@ -2,6 +2,7 @@ import { useState, useEffect, useContext, useCallback, useRef } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import { Navigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { translateGroup, translateCommodity, translateState } from '../cropTranslations';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -292,7 +293,8 @@ const downloadCSV = (data, commodity, filters) => {
 
 const PriceHistory = () => {
   const { user } = useContext(AuthContext);
-  const { t }    = useTranslation();
+  const { t, i18n } = useTranslation();
+  const currentLang = i18n.resolvedLanguage || i18n.language || 'en';
 
   const [groups,      setGroups]      = useState([]);
   const [commodities, setCommodities] = useState([]);
@@ -408,16 +410,16 @@ const PriceHistory = () => {
             <div className="form-group" style={{ marginBottom: 0 }}>
               <label>{t('priceHistory.commodityGroup')}</label>
               <select name="group" value={filters.group} onChange={handleChange} disabled={loadingMeta}>
-                <option value="">— Select Group —</option>
-                {groups.map(g => <option key={g} value={g}>{g}</option>)}
+                <option value="">{t('priceHistory.selectGroup')}</option>
+                {groups.map(g => <option key={g} value={g}>{translateGroup(g, currentLang)}</option>)}
               </select>
             </div>
 
             <div className="form-group" style={{ marginBottom: 0 }}>
               <label>{t('priceHistory.commodity')}</label>
               <select name="commodity" value={filters.commodity} onChange={handleChange} disabled={!filters.group}>
-                <option value="">— Select Commodity —</option>
-                {commodities.map(c => <option key={c} value={c}>{c}</option>)}
+                <option value="">{t('priceHistory.selectCommodityPlaceholder')}</option>
+                {commodities.map(c => <option key={c} value={c}>{translateCommodity(c, currentLang)}</option>)}
               </select>
             </div>
 
@@ -434,8 +436,8 @@ const PriceHistory = () => {
             <div className="form-group" style={{ marginBottom: 0 }}>
               <label>{t('priceHistory.state')}</label>
               <select name="state" value={filters.state} onChange={handleChange} disabled={loadingMeta}>
-                <option value="">— All States —</option>
-                {states.map(s => <option key={s} value={s}>{s}</option>)}
+                <option value="">{t('priceHistory.allStates')}</option>
+                {states.map(s => <option key={s} value={s}>{translateState(s, currentLang)}</option>)}
               </select>
             </div>
 
@@ -485,10 +487,10 @@ const PriceHistory = () => {
                   background: 'linear-gradient(to right, #34d399, #10b981)',
                   WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
                 }}>
-                  {priceData.commodity} — Modal Price Trend
+                  {translateCommodity(priceData.commodity, currentLang)} — {t('priceHistory.modalPriceTrend')}
                 </h2>
                 <span style={{ fontSize: '0.8rem', color: '#52525b' }}>
-                  {priceData.data.length} {t('priceHistory.dataPoints')} &nbsp;·&nbsp; Rs./Quintal &nbsp;·&nbsp; Hover for details
+                  {priceData.data.length} {t('priceHistory.dataPoints')} &nbsp;·&nbsp; Rs./Quintal &nbsp;·&nbsp; {t('priceHistory.hoverDetails')}
                 </span>
               </div>
               <span style={{
@@ -497,7 +499,7 @@ const PriceHistory = () => {
                 borderRadius: '20px', border: '1px solid rgba(34,197,94,0.2)',
                 whiteSpace: 'nowrap', alignSelf: 'flex-start',
               }}>
-                {filters.state || 'All States'}
+                {translateState(filters.state, currentLang) || t('priceHistory.allStatesLabel')}
                 {filters.startDate ? ` · ${fmtShort(filters.startDate)}` : ''}
                 {filters.endDate   ? ` → ${fmtShort(filters.endDate)}`   : ''}
               </span>

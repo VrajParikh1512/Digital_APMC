@@ -277,7 +277,7 @@ const AdminPanel = () => {
           </div>
         ) : (
           <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
-            <p>No data in database yet. Run the import to get started.</p>
+            <p>{t('adminPanel.noDataYet')}</p>
           </div>
         )}
       </div>
@@ -296,44 +296,44 @@ const AdminPanel = () => {
         <form onSubmit={handlePriceSubmit}>
           <div className="filter-grid">
             <div className="form-group" style={{ marginBottom: 0 }}>
-              <label>State *</label>
+              <label>{t('adminPanel.stateLabel')}</label>
               <select name="state" value={priceForm.state} onChange={handlePriceChange} required>
-                <option value="">— Select State —</option>
+                <option value="">{t('pricePrediction.selectStatePlaceholder')}</option>
                 {states.map(s => <option key={s} value={s}>{s}</option>)}
               </select>
             </div>
             <div className="form-group" style={{ marginBottom: 0 }}>
-              <label>District *</label>
+              <label>{t('adminPanel.districtLabel')}</label>
               <input name="district" value={priceForm.district} onChange={handlePriceChange} placeholder="e.g. Ahmedabad" required />
             </div>
             <div className="form-group" style={{ marginBottom: 0 }}>
-              <label>Market / Mandi *</label>
+              <label>{t('adminPanel.marketLabel')}</label>
               <input name="market" value={priceForm.market} onChange={handlePriceChange} placeholder="e.g. Jamalpur APMC" required />
             </div>
             <div className="form-group" style={{ marginBottom: 0 }}>
-              <label>Commodity Group *</label>
+              <label>{t('adminPanel.commodityGroupLabel')}</label>
               <select name="commodity_group" value={priceForm.commodity_group} onChange={handlePriceChange} required>
-                <option value="">— Select Group —</option>
+                <option value="">{t('pricePrediction.selectGroup')}</option>
                 {groups.map(g => <option key={g} value={g}>{g}</option>)}
               </select>
             </div>
             <div className="form-group" style={{ marginBottom: 0 }}>
-              <label>Crop / Commodity *</label>
+              <label>{t('adminPanel.cropCommodityLabel')}</label>
               <select name="commodity" value={priceForm.commodity} onChange={handlePriceChange} disabled={!priceForm.commodity_group} required>
-                <option value="">— Select Commodity —</option>
+                <option value="">{t('pricePrediction.selectCommodityPlaceholder')}</option>
                 {commodities.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
             <div className="form-group" style={{ marginBottom: 0 }}>
-              <label>Min Price (₹/Quintal) *</label>
+              <label>{t('adminPanel.minPriceLabel')}</label>
               <input type="number" min="1" step="any" name="min_price" value={priceForm.min_price} onChange={handlePriceChange} required />
             </div>
             <div className="form-group" style={{ marginBottom: 0 }}>
-              <label>Modal Price (₹/Quintal) *</label>
+              <label>{t('adminPanel.modalPriceLabel')}</label>
               <input type="number" min="1" step="any" name="modal_price" value={priceForm.modal_price} onChange={handlePriceChange} required />
             </div>
             <div className="form-group" style={{ marginBottom: 0 }}>
-              <label>Max Price (₹/Quintal) *</label>
+              <label>{t('adminPanel.maxPriceLabel')}</label>
               <input type="number" min="1" step="any" name="max_price" value={priceForm.max_price} onChange={handlePriceChange} required />
             </div>
           </div>
