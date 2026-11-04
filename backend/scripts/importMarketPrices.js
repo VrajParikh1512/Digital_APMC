@@ -136,7 +136,9 @@ function parseDate(str) {
 
 // ─── toFloat helper ───────────────────────────────────────────────────────────
 function toFloat(v) {
-  return (v !== undefined && v !== '' && v !== '-') ? parseFloat(v) : null;
+  if (v === undefined || v === '' || v === '-') return null;
+  const n = parseFloat(v);
+  return Number.isFinite(n) ? n : null; // text like "N/A" becomes null, not NaN
 }
 
 // ─── Import a single CSV file ─────────────────────────────────────────────────
@@ -157,6 +159,7 @@ async function importFile(filePath, categoryName, col) {
 
   let lineNum       = 0;
   let headers       = null;
+  let ci            = {}; // column name -> position
   let batch         = [];
   let inserted      = 0;
   let skipped       = 0;
@@ -174,7 +177,7 @@ async function importFile(filePath, categoryName, col) {
     if (!headers) {
       headers = splitCSVLine(trimmed).map(normaliseHeader);
       // Pre-compute column positions
-      var ci = {};
+      ci = {};
       headers.forEach((h, i) => { ci[h] = i; });
       continue;
     }
@@ -213,7 +216,7 @@ async function importFile(filePath, categoryName, col) {
       inserted += toWrite.length;
       // Pipeline: chain onto the previous write so they don't stack up
       pendingWrite = pendingWrite.then(() =>
-        col.insertMany(toWrite, { ordered: false }).catch(() => {})
+        col.insertMany(toWrite, { ordered: false }).catch(e => console.error(`\n    insertMany error in ${fileName}: ${e.message}`))
       );
       process.stdout.write(`\r    ${fileName}: ${inserted.toLocaleString()} rows...`);
     }
@@ -224,7 +227,7 @@ async function importFile(filePath, categoryName, col) {
     const toWrite = batch;
     inserted += toWrite.length;
     pendingWrite = pendingWrite.then(() =>
-      col.insertMany(toWrite, { ordered: false }).catch(() => {})
+      col.insertMany(toWrite, { ordered: false }).catch(e => console.error(`\n    insertMany error in ${fileName}: ${e.message}`))
     );
   }
 

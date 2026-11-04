@@ -1,0 +1,82 @@
+{
+  "algorithm": "LightGBM",
+  "trained_through": "2026-10-15",
+  "weighting": "recent data counts more (half-life 180 days)",
+  "lightgbm_version": "4.6.0",
+  "rounds": 160,
+  "features": [
+    "ret_1",
+    "ret_3",
+    "ret_7",
+    "ret_14",
+    "days_since_prev",
+    "log_arrival",
+    "arrival_change",
+    "price_spread",
+    "arrival_missing",
+    "spread_missing",
+    "lag1_missing",
+    "lag3_missing",
+    "lag7_missing",
+    "lag14_missing",
+    "sin_doy",
+    "cos_doy",
+    "sin_dow",
+    "cos_dow",
+    "group_cat",
+    "state_cat",
+    "district_cat",
+    "market_cat",
+    "commodity_cat"
+  ],
+  "test_report": {
+    "test_until": "2026-10-15",
+    "train_until": "2025-10-15",
+    "results": [
+      {
+        "forecast_step": 1,
+        "test_rows": 2177394,
+        "baseline_mape_pct": 7.055695533752441,
+        "model_mape_pct": 6.952216838866486,
+        "baseline_mae_rs": 263.96630859375,
+        "model_mae_rs": 259.91557095941903,
+        "baseline_within20_pct": 91.81020981962843,
+        "model_within20_pct": 92.00516764535955,
+        "improvement_pct": 1.4665980751428855
+      },
+      {
+        "forecast_step": 2,
+        "test_rows": 2177394,
+        "baseline_mape_pct": 8.787776947021484,
+        "model_mape_pct": 8.572991359444067,
+        "baseline_mae_rs": 325.4002990722656,
+        "model_mae_rs": 316.81909050266853,
+        "baseline_within20_pct": 89.26946616000595,
+        "model_within20_pct": 89.83422384740658,
+        "improvement_pct": 2.4441401832600684
+      },
+      {
+        "forecast_step": 3,
+        "test_rows": 2177394,
+        "baseline_mape_pct": 9.801617622375488,
+        "model_mape_pct": 9.501690573745119,
+        "baseline_mae_rs": 366.57952880859375,
+        "model_mae_rs": 356.3422902138252,
+        "baseline_within20_pct": 87.38588422674077,
+        "model_within20_pct": 88.08644645847284,
+        "improvement_pct": 3.0599749978583635
+      },
+      {
+        "forecast_step": 7,
+        "test_rows": 2177394,
+        "baseline_mape_pct": 12.511626243591309,
+        "model_mape_pct": 12.203938201276857,
+        "baseline_mae_rs": 478.02508544921875,
+        "model_mae_rs": 466.389420114913,
+        "baseline_within20_pct": 82.29397160091375,
+        "model_within20_pct": 82.87599763754287,
+        "improvement_pct": 2.459217022024254
+      }
+    ]
+  }
+}

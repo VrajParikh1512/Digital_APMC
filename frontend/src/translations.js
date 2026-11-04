@@ -7,6 +7,7 @@ const en = {
       marketplace: 'Marketplace',
       myListings: 'My Listings',
       priceHistory: 'Price History',
+      pricePrediction: 'Price Prediction',
       adminPanel: 'Admin Panel',
     },
     dashboard: {
@@ -27,7 +28,12 @@ const en = {
       quantity: 'Quantity',
       noDescription: 'No description provided.',
       farmer: 'Farmer',
-      contactFarmer: 'Contact Farmer'
+      contactFarmer: 'Contact Farmer',
+      contactInfo: 'Contact Info',
+      close: 'Close',
+      noPhone: 'No phone number available',
+      clear: 'Clear',
+      call: 'Call'
     },
     myListings: {
       editListing: 'Edit Listing',
@@ -46,7 +52,22 @@ const en = {
       myListedCrops: 'My Listed Crops',
       loading: 'Loading...',
       noCropsYet: "You haven't listed any crops yet.",
-      editBtn: 'Edit'
+      editBtn: 'Edit',
+      deleteBtn: 'Delete',
+      confirmDelete: 'Delete this listing? This cannot be undone.',
+      created: 'Listing created successfully!',
+      updated: 'Listing updated successfully!',
+      deleted: 'Listing deleted.',
+      fillRequired: 'Please fill all required fields'
+    },
+    voice: {
+      start: 'Speak',
+      listening: 'Listening… speak now',
+      stop: 'Stop',
+      notSupported: 'Voice input is not supported in this browser. Please use Google Chrome or Microsoft Edge.',
+      micDenied: 'Microphone permission was denied. Allow the microphone in your browser settings.',
+      noSpeech: 'Could not hear anything. Please try again.',
+      error: 'Voice input failed. Please try again.'
     },
     auth: {
       welcomeBack: 'Welcome Back',
@@ -110,6 +131,14 @@ const en = {
       triggerImport: 'Trigger Re-Import',
       clearData: 'Clear All Price Data',
       refreshStats: 'Refresh Stats',
+      usersByCategory: 'Users by Category',
+      totalUsers: 'Total Users',
+      farmers: 'Farmers',
+      businessOwners: 'Business Owners',
+      admins: 'Admins',
+      updateTodayPrice: "Update Today's Crop Price",
+      updateTodayHint: 'Set the price of a crop for a mandi (area) for today. Farmers will see it in Price History.',
+      savePrice: "Save Today's Price",
     }
   }
 };
@@ -122,7 +151,8 @@ export const resources = {
   en,
   hi: {
     translation: {
-      navbar: { login: 'लॉग इन करें', signup: 'साइन अप करें', logout: 'लॉग आउट', marketplace: 'बाज़ार', myListings: 'मेरी लिस्टिंग' },
+      navbar: { login: 'लॉग इन करें', signup: 'साइन अप करें', logout: 'लॉग आउट', marketplace: 'बाज़ार', myListings: 'मेरी लिस्टिंग', priceHistory: 'भाव इतिहास', pricePrediction: 'भाव पूर्वानुमान', adminPanel: 'एडमिन पैनल' },
+      voice: { start: 'बोलें', listening: 'सुन रहे हैं… अब बोलें', stop: 'रोकें' },
       dashboard: { title: 'डैशबोर्ड', subtitle: 'भूमिका:', welcome: 'स्वागत है। भविष्य की सुविधाएँ यहाँ उपलब्ध होंगी।' },
       marketplace: {
         findCrops: 'फसलें खोजें', searchCrop: 'फसल खोजें', searchPlaceholder: 'जैसे गेहूँ', minQty: 'न्यूनतम मात्रा (किग्रा)',
@@ -149,7 +179,8 @@ export const resources = {
   },
   mr: {
     translation: {
-      navbar: { login: 'लॉगिन करा', signup: 'साइन अप करा', logout: 'लॉगआउट', marketplace: 'बाजार', myListings: 'माझी यादी' },
+      navbar: { login: 'लॉगिन करा', signup: 'साइन अप करा', logout: 'लॉगआउट', marketplace: 'बाजार', myListings: 'माझी यादी', priceHistory: 'भाव इतिहास', pricePrediction: 'भाव अंदाज', adminPanel: 'अ‍ॅडमिन पॅनेल' },
+      voice: { start: 'बोला', listening: 'ऐकत आहे… आता बोला', stop: 'थांबवा' },
       dashboard: { title: 'डॅशबोर्ड', subtitle: 'भूमिका:', welcome: 'स्वागत आहे. भविष्यातील वैशिष्ट्ये येथे उपलब्ध असतील.' },
       marketplace: {
         findCrops: 'पिके शोधा', searchCrop: 'पीक शोधा', searchPlaceholder: 'उदा. गहू', minQty: 'किमान प्रमाण (किलो)',
@@ -176,7 +207,8 @@ export const resources = {
   },
   gu: {
     translation: {
-      navbar: { login: 'લૉગિન', signup: 'સાઇન અપ', logout: 'લૉગઆઉટ', marketplace: 'બજાર', myListings: 'મારી સૂચિઓ' },
+      navbar: { login: 'લૉગિન', signup: 'સાઇન અપ', logout: 'લૉગઆઉટ', marketplace: 'બજાર', myListings: 'મારી સૂચિઓ', priceHistory: 'ભાવ ઇતિહાસ', pricePrediction: 'ભાવ અનુમાન', adminPanel: 'એડમિન પેનલ' },
+      voice: { start: 'બોલો', listening: 'સાંભળી રહ્યું છે… હવે બોલો', stop: 'બંધ કરો' },
       dashboard: { title: 'ડેશબોર્ડ', subtitle: 'ભૂમિકા:', welcome: 'સ્વાગત છે. ભવિષ્યની સુવિધાઓ અહીં ઉપલબ્ધ થશે.' },
       marketplace: {
         findCrops: 'પાક શોધો', searchCrop: 'પાક શોધો', searchPlaceholder: 'દા.ત. ઘઉં', minQty: 'ન્યૂનતમ જથ્થો (કિલો)',

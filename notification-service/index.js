@@ -6,6 +6,10 @@ dotenv.config();
 
 const BACKEND_API_URL = process.env.BACKEND_API_URL || 'http://localhost:5000/api';
 const FAST2SMS_API_KEY = process.env.FAST2SMS_API_KEY;
+const INTERNAL_API_KEY = process.env.INTERNAL_API_KEY;
+
+// Header that proves to the backend that this request comes from our own service
+const internalHeaders = { 'x-internal-key': INTERNAL_API_KEY };
 
 // Fast2SMS requires 10-digit numbers without country code
 const formatPhoneNumber = (number) => {
@@ -16,6 +20,11 @@ const formatPhoneNumber = (number) => {
 
 const sendSMS = async (phoneNumber, message) => {
   const toNumber = formatPhoneNumber(phoneNumber);
+
+  if (!FAST2SMS_API_KEY) {
+    console.error('[SMS SERVICE] FAST2SMS_API_KEY is missing in notification-service/.env. SMS not sent.');
+    return false;
+  }
 
   // Keep the console log for debugging
   console.log('--------------------------------------------------');
@@ -58,9 +67,17 @@ const sendSMS = async (phoneNumber, message) => {
 
 const runNotificationJob = async () => {
   console.log('[CRON] Running crop verification notification job...');
+
+  if (!INTERNAL_API_KEY) {
+    console.error('[CRON] INTERNAL_API_KEY is missing in notification-service/.env (must match backend/.env). Job skipped.');
+    return;
+  }
+
   try {
     // 1. Fetch pending crops from the main backend
-    const response = await axios.get(`${BACKEND_API_URL}/crops/notifications/pending`);
+    const response = await axios.get(`${BACKEND_API_URL}/crops/notifications/pending`, {
+      headers: internalHeaders,
+    });
     const staleCrops = response.data;
 
     console.log(`[CRON] Found ${staleCrops.length} crops requiring verification reminders.`);
@@ -83,9 +100,11 @@ const runNotificationJob = async () => {
 
     // 3. Inform main backend to update the lastNotificationSentAt status
     if (notifiedCropIds.length > 0) {
-      await axios.put(`${BACKEND_API_URL}/crops/notifications/mark-sent`, {
-        cropIds: notifiedCropIds
-      });
+      await axios.put(
+        `${BACKEND_API_URL}/crops/notifications/mark-sent`,
+        { cropIds: notifiedCropIds },
+        { headers: internalHeaders }
+      );
       console.log(`[CRON] Successfully marked ${notifiedCropIds.length} notifications as sent.`);
     }
 

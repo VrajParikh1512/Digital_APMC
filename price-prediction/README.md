@@ -36,8 +36,8 @@ pip install -r requirements.txt
 uvicorn api:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-The service will start without a trained model. It will report `model_not_loaded` on `/health`
-until you place model artifacts in `artifacts/`.
+The service starts even without a trained model. In that case `/health` reports `fallback_mode` and `/predict`
+returns a simple trend-based estimate (`engine: fallback`). Place model artifacts in `artifacts/` to get real LightGBM forecasts (`engine: lightgbm`).
 
 ### 3. Place trained model artifacts
 
@@ -64,6 +64,8 @@ artifacts/
 ```
 
 ### 4. Train models (from Agmarknet zip archive)
+
+> `train_lightgbm.py` imports a helper module `train_base.py` (feature building and CSV reading). That file was not in the project folder, so training cannot run until it is added.
 
 ```bash
 python train_lightgbm.py \

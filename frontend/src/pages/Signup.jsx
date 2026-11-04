@@ -26,8 +26,20 @@ const Signup = () => {
     e.preventDefault();
     setError('');
     
-    if (!formData.name || !formData.phoneNumber || !formData.password || !formData.role) {
+    if (!formData.name.trim() || !formData.phoneNumber || !formData.password || !formData.role) {
       setError('Please fill in all fields');
+      return;
+    }
+
+    // Same rules as the server: 10-digit phone, password of at least 6 characters
+    const digits = formData.phoneNumber.replace(/\D/g, '');
+    const phone10 = digits.length === 12 && digits.startsWith('91') ? digits.slice(2) : digits;
+    if (!/^\d{10}$/.test(phone10)) {
+      setError('Phone number must be 10 digits');
+      return;
+    }
+    if (formData.password.length < 6) {
+      setError('Password must be at least 6 characters');
       return;
     }
 
@@ -63,6 +75,7 @@ const Signup = () => {
             <label>{t('auth.phone')}</label>
             <input 
               type="tel" 
+              autoComplete="tel"
               name="phoneNumber"
               placeholder={t('auth.phonePlaceholder')} 
               value={formData.phoneNumber}
@@ -74,6 +87,7 @@ const Signup = () => {
             <label>{t('auth.password')}</label>
             <input 
               type="password" 
+              autoComplete="new-password"
               name="password"
               placeholder={t('auth.passwordPlaceholderSignup')} 
               value={formData.password}

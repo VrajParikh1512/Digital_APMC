@@ -16,6 +16,9 @@ export function clearPriceCache() {
   cachedCommoditiesByGroup.clear();
 }
 
+// Remembers how the background import is going, so the Admin page can show it
+const importState = { status: 'idle', startedAt: null, finishedAt: null, error: null };
+
 // ─── Public-to-Authenticated (any logged-in role) ────────────────────────────
 
 // @desc    Get distinct commodity groups
@@ -102,16 +105,90 @@ router.get('/stats', protect, adminOnly, async (req, res) => {
   }
 });
 
+// @desc    Progress of the background import
+// @route   GET /api/market-prices/import-status
+// @access  Admin only
+router.get('/import-status', protect, adminOnly, (req, res) => {
+  res.json(importState);
+});
+
 // @desc    Trigger a re-import (runs import logic as background job)
 // @route   POST /api/market-prices/import
 // @access  Admin only
 router.post('/import', protect, adminOnly, async (req, res) => {
+  if (importState.status === 'running') {
+    return res.status(409).json({ message: 'An import is already running.' });
+  }
+
+  clearPriceCache();
+  importState.status = 'running';
+  importState.startedAt = new Date();
+  importState.finishedAt = null;
+  importState.error = null;
+
+  // Respond immediately — import runs in background
+  res.status(202).json({ message: 'Import started in background. This page will update when it finishes.' });
+
+  runImport()
+    .then(() => { importState.status = 'done'; })
+    .catch(err => {
+      importState.status = 'error';
+      importState.error = err.message;
+      console.error('Background import error:', err.message);
+    })
+    .finally(() => {
+      importState.finishedAt = new Date();
+      clearPriceCache(); // lists may have changed while importing
+    });
+});
+
+// @desc    Admin sets today's price of a crop for an area (mandi)
+// @route   POST /api/market-prices/today
+// @access  Admin only
+router.post('/today', protect, adminOnly, async (req, res) => {
   try {
+    const { state, district, market, commodity_group, commodity } = req.body;
+    const min_price = Number(req.body.min_price);
+    const modal_price = Number(req.body.modal_price);
+    const max_price = Number(req.body.max_price);
+
+    if (!state || !district || !market || !commodity_group || !commodity) {
+      return res.status(400).json({ message: 'State, district, market, group and commodity are required.' });
+    }
+    if (![min_price, modal_price, max_price].every(n => Number.isFinite(n) && n > 0)) {
+      return res.status(400).json({ message: 'Min, modal and max price must be numbers greater than 0.' });
+    }
+    if (!(min_price <= modal_price && modal_price <= max_price)) {
+      return res.status(400).json({ message: 'Prices must follow: min ≤ modal ≤ max.' });
+    }
+
+    // Today's date at 00:00 UTC (same style as the imported data)
+    const today = new Date(new Date().toISOString().slice(0, 10) + 'T00:00:00.000Z');
+
+    const key = {
+      state: state.trim(),
+      district: district.trim(),
+      market: market.trim(),
+      commodity: commodity.trim(),
+      date: today,
+    };
+
+    // One row per mandi + crop + day: update it if it exists, otherwise create it
+    const saved = await MarketPrice.findOneAndUpdate(
+      key,
+      {
+        ...key,
+        commodity_group: commodity_group.trim(),
+        min_price,
+        modal_price,
+        max_price,
+        price_unit: 'Rs./Quintal',
+      },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
+
     clearPriceCache();
-    // Respond immediately — import runs in background
-    res.status(202).json({ message: 'Import started in background. Check server logs for progress.' });
-    // Fire-and-forget
-    runImport().catch(err => console.error('Background import error:', err.message));
+    res.status(201).json({ message: `Today's price saved for ${key.commodity} in ${key.market}.`, price: saved });
   } catch (err) {
     res.status(500).json({ message: 'Server error', error: err.message });
   }
@@ -141,6 +218,10 @@ router.get('/', protect, farmerOnly, async (req, res) => {
 
     if (!commodity) {
       return res.status(400).json({ message: '`commodity` query param is required.' });
+    }
+
+    if ((startDate && isNaN(new Date(startDate))) || (endDate && isNaN(new Date(endDate)))) {
+      return res.status(400).json({ message: 'Invalid date.' });
     }
 
     // Build match stage

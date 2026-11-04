@@ -15,7 +15,7 @@ const Login = () => {
     e.preventDefault();
     setError('');
     
-    if (!phoneNumber || !password) {
+    if (!phoneNumber.trim() || !password) {
       setError('Please fill in all fields');
       return;
     }
@@ -41,6 +41,7 @@ const Login = () => {
             <label>{t('auth.phone')}</label>
             <input 
               type="tel" 
+              autoComplete="tel"
               placeholder={t('auth.phonePlaceholder')} 
               value={phoneNumber}
               onChange={(e) => setPhoneNumber(e.target.value)}
@@ -51,6 +52,7 @@ const Login = () => {
             <label>{t('auth.password')}</label>
             <input 
               type="password" 
+              autoComplete="current-password"
               placeholder={t('auth.passwordPlaceholderLogin')} 
               value={password}
               onChange={(e) => setPassword(e.target.value)}

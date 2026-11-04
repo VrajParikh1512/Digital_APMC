@@ -1,6 +1,5 @@
-import { useState, useEffect, useContext } from 'react';
+import { useState, useEffect, useContext, useRef } from 'react';
 import { AuthContext } from '../context/AuthContext';
-import { Navigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
 // ─── Stat Card Component ──────────────────────────────────────────────────────
@@ -46,27 +45,56 @@ const StatusBadge = ({ status }) => {
   );
 };
 
+const sectionTitle = {
+  fontSize: '1.1rem', fontWeight: 600, marginBottom: '1.5rem',
+  color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em',
+};
+
+const EMPTY_PRICE = {
+  state: '', district: '', market: '', commodity_group: '', commodity: '',
+  min_price: '', modal_price: '', max_price: '',
+};
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 const AdminPanel = () => {
-  const { user } = useContext(AuthContext);
+  const { user, logout } = useContext(AuthContext);
   const { t }    = useTranslation();
 
   const [stats,         setStats]         = useState(null);
+  const [userStats,     setUserStats]     = useState(null);
   const [loadingStats,  setLoadingStats]  = useState(true);
   const [importStatus,  setImportStatus]  = useState('idle'); // idle | running | done | error
   const [clearStatus,   setClearStatus]   = useState('idle');
   const [message,       setMessage]       = useState('');
 
-  const authHeaders = { Authorization: `Bearer ${user?.token}` };
+  // "Update today's price" form
+  const [groups,      setGroups]      = useState([]);
+  const [commodities, setCommodities] = useState([]);
+  const [states,      setStates]      = useState([]);
+  const [priceForm,   setPriceForm]   = useState(EMPTY_PRICE);
+  const [priceMsg,    setPriceMsg]    = useState(null); // { type, text }
+  const [savingPrice, setSavingPrice] = useState(false);
 
+  const authHeaders = { Authorization: `Bearer ${user?.token}` };
+  const pollRef = useRef(null);
+
+  // ── Load numbers shown at the top ───────────────────────────────────────────
   const fetchStats = async () => {
     setLoadingStats(true);
     try {
-      const res  = await fetch('/api/market-prices/stats', { headers: authHeaders });
-      const data = await res.json();
-      if (res.ok) setStats(data);
-      else setMessage(data.message || 'Failed to load stats.');
+      const [priceRes, userRes] = await Promise.all([
+        fetch('/api/market-prices/stats', { headers: authHeaders }),
+        fetch('/api/admin/user-stats',    { headers: authHeaders }),
+      ]);
+
+      if (priceRes.status === 401 || userRes.status === 401) { logout(); return; }
+
+      const priceData = await priceRes.json();
+      if (priceRes.ok) setStats(priceData);
+      else setMessage(priceData.message || 'Failed to load stats.');
+
+      if (userRes.ok) setUserStats(await userRes.json());
     } catch {
       setMessage('Could not connect to server.');
     } finally {
@@ -74,10 +102,56 @@ const AdminPanel = () => {
     }
   };
 
+  // ── Load dropdown lists for the price form ──────────────────────────────────
+  const fetchLists = async () => {
+    try {
+      const [gRes, sRes] = await Promise.all([
+        fetch('/api/market-prices/groups', { headers: authHeaders }),
+        fetch('/api/market-prices/states', { headers: authHeaders }),
+      ]);
+      if (gRes.ok) setGroups(await gRes.json());
+      if (sRes.ok) setStates(await sRes.json());
+    } catch { /* lists stay empty; the admin can still type nothing and see the error */ }
+  };
+
   useEffect(() => {
     fetchStats();
+    fetchLists();
+    return () => clearInterval(pollRef.current); // stop polling when leaving the page
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // When the group changes, load the crops of that group
+  useEffect(() => {
+    if (!priceForm.commodity_group) { setCommodities([]); return; }
+    fetch(`/api/market-prices/commodities?group=${encodeURIComponent(priceForm.commodity_group)}`, { headers: authHeaders })
+      .then(r => r.json())
+      .then(d => setCommodities(Array.isArray(d) ? d : []))
+      .catch(() => setCommodities([]));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [priceForm.commodity_group]);
+
+  // ── Import: start, then check progress every 4 seconds ──────────────────────
+  const pollImport = () => {
+    clearInterval(pollRef.current);
+    pollRef.current = setInterval(async () => {
+      try {
+        const res  = await fetch('/api/market-prices/import-status', { headers: authHeaders });
+        const data = await res.json();
+        if (data.status === 'done') {
+          clearInterval(pollRef.current);
+          setImportStatus('done');
+          setMessage('Import finished successfully.');
+          fetchStats();
+          fetchLists();
+        } else if (data.status === 'error') {
+          clearInterval(pollRef.current);
+          setImportStatus('error');
+          setMessage(`Import failed: ${data.error}`);
+        }
+      } catch { /* try again on the next tick */ }
+    }, 4000);
+  };
 
   const handleImport = async () => {
     if (!window.confirm('This will drop and re-import all price data. This may take several minutes. Continue?')) return;
@@ -87,11 +161,12 @@ const AdminPanel = () => {
       const res  = await fetch('/api/market-prices/import', { method: 'POST', headers: authHeaders });
       const data = await res.json();
       if (res.ok || res.status === 202) {
-        setImportStatus('running');
-        setMessage(data.message || 'Import started. Check server logs for progress.');
+        setMessage(data.message || 'Import started.');
+        pollImport();
       } else {
-        setImportStatus('error');
+        setImportStatus(res.status === 409 ? 'running' : 'error');
         setMessage(data.message || 'Import failed.');
+        if (res.status === 409) pollImport();
       }
     } catch (err) {
       setImportStatus('error');
@@ -110,6 +185,7 @@ const AdminPanel = () => {
         setClearStatus('done');
         setMessage(data.message);
         setStats(null);
+        fetchLists();
       } else {
         setClearStatus('error');
         setMessage(data.message || 'Clear failed.');
@@ -120,10 +196,44 @@ const AdminPanel = () => {
     }
   };
 
+  // ── Update today's price ────────────────────────────────────────────────────
+  const handlePriceChange = (e) => {
+    const { name, value } = e.target;
+    setPriceForm(prev => ({
+      ...prev,
+      [name]: value,
+      ...(name === 'commodity_group' ? { commodity: '' } : {}),
+    }));
+  };
+
+  const handlePriceSubmit = async (e) => {
+    e.preventDefault();
+    setPriceMsg(null);
+    setSavingPrice(true);
+    try {
+      const res  = await fetch('/api/market-prices/today', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeaders },
+        body: JSON.stringify(priceForm),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setPriceMsg({ type: 'success', text: data.message });
+        // keep the area, clear the prices so the next crop can be entered quickly
+        setPriceForm(prev => ({ ...prev, commodity: '', min_price: '', modal_price: '', max_price: '' }));
+        fetchStats();
+      } else {
+        setPriceMsg({ type: 'error', text: data.message || 'Could not save the price.' });
+      }
+    } catch {
+      setPriceMsg({ type: 'error', text: 'Could not connect to the server.' });
+    } finally {
+      setSavingPrice(false);
+    }
+  };
+
   const formatDate = iso => iso ? new Date(iso).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
   const formatNum  = n  => n != null ? n.toLocaleString('en-IN') : '—';
-
-  if (!user || user.role !== 'Admin') return <Navigate to="/dashboard" />;
 
   return (
     <div style={{ padding: '2rem', maxWidth: '960px', margin: '0 auto', width: '100%' }}>
@@ -136,18 +246,28 @@ const AdminPanel = () => {
         </p>
       </div>
 
-      {/* Stats Grid */}
+      {/* Users by category */}
       <div className="glass-panel" style={{ maxWidth: '100%', margin: '0 0 2rem', padding: '2rem' }}>
-        <h2 style={{
-          fontSize: '1.1rem', fontWeight: 600, marginBottom: '1.5rem',
-          color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em',
-        }}>
-          {t('adminPanel.importStats')}
-        </h2>
+        <h2 style={sectionTitle}>{t('adminPanel.usersByCategory')}</h2>
+        {userStats ? (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem' }}>
+            <StatCard icon="👥" label={t('adminPanel.totalUsers')}    value={formatNum(userStats.total)}                 accent="#a78bfa" />
+            <StatCard icon="🧑‍🌾" label={t('adminPanel.farmers')}       value={formatNum(userStats.byRole.Farmer)}         accent="#22c55e" />
+            <StatCard icon="🏪" label={t('adminPanel.businessOwners')} value={formatNum(userStats.byRole['Business Owner'])} accent="#eab308" />
+            <StatCard icon="🛡️" label={t('adminPanel.admins')}        value={formatNum(userStats.byRole.Admin)}          accent="#3b82f6" />
+          </div>
+        ) : (
+          <p style={{ color: 'var(--text-muted)' }}>{loadingStats ? t('adminPanel.loadingStats') : '—'}</p>
+        )}
+      </div>
+
+      {/* Price data stats */}
+      <div className="glass-panel" style={{ maxWidth: '100%', margin: '0 0 2rem', padding: '2rem' }}>
+        <h2 style={sectionTitle}>{t('adminPanel.importStats')}</h2>
 
         {loadingStats ? (
           <p style={{ color: 'var(--text-muted)' }}>{t('adminPanel.loadingStats')}</p>
-        ) : stats ? (
+        ) : stats && stats.totalRows > 0 ? (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem' }}>
             <StatCard icon="📊" label={t('adminPanel.totalRows')}   value={formatNum(stats.totalRows)}   accent="#22c55e" />
             <StatCard icon="🌾" label={t('adminPanel.totalGroups')} value={stats.totalGroups}            accent="#eab308" />
@@ -160,6 +280,68 @@ const AdminPanel = () => {
             <p>No data in database yet. Run the import to get started.</p>
           </div>
         )}
+      </div>
+
+      {/* Update today's price */}
+      <div className="glass-panel" style={{ maxWidth: '100%', margin: '0 0 2rem', padding: '2rem', borderColor: 'rgba(34,197,94,0.25)' }}>
+        <h2 style={{ ...sectionTitle, marginBottom: '0.5rem' }}>{t('adminPanel.updateTodayPrice')}</h2>
+        <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
+          {t('adminPanel.updateTodayHint')}
+        </p>
+
+        {priceMsg && (
+          <div className={`notice ${priceMsg.type === 'success' ? 'notice-success' : 'notice-error'}`}>{priceMsg.text}</div>
+        )}
+
+        <form onSubmit={handlePriceSubmit}>
+          <div className="filter-grid">
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label>State *</label>
+              <select name="state" value={priceForm.state} onChange={handlePriceChange} required>
+                <option value="">— Select State —</option>
+                {states.map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label>District *</label>
+              <input name="district" value={priceForm.district} onChange={handlePriceChange} placeholder="e.g. Ahmedabad" required />
+            </div>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label>Market / Mandi *</label>
+              <input name="market" value={priceForm.market} onChange={handlePriceChange} placeholder="e.g. Jamalpur APMC" required />
+            </div>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label>Commodity Group *</label>
+              <select name="commodity_group" value={priceForm.commodity_group} onChange={handlePriceChange} required>
+                <option value="">— Select Group —</option>
+                {groups.map(g => <option key={g} value={g}>{g}</option>)}
+              </select>
+            </div>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label>Crop / Commodity *</label>
+              <select name="commodity" value={priceForm.commodity} onChange={handlePriceChange} disabled={!priceForm.commodity_group} required>
+                <option value="">— Select Commodity —</option>
+                {commodities.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label>Min Price (₹/Quintal) *</label>
+              <input type="number" min="1" step="any" name="min_price" value={priceForm.min_price} onChange={handlePriceChange} required />
+            </div>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label>Modal Price (₹/Quintal) *</label>
+              <input type="number" min="1" step="any" name="modal_price" value={priceForm.modal_price} onChange={handlePriceChange} required />
+            </div>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label>Max Price (₹/Quintal) *</label>
+              <input type="number" min="1" step="any" name="max_price" value={priceForm.max_price} onChange={handlePriceChange} required />
+            </div>
+          </div>
+
+          <button type="submit" className="btn" disabled={savingPrice} style={{ width: 'auto', padding: '0.75rem 2rem' }}>
+            {savingPrice ? '…' : t('adminPanel.savePrice')}
+          </button>
+        </form>
       </div>
 
       {/* Import Instructions */}
@@ -178,8 +360,8 @@ const AdminPanel = () => {
           fontFamily: 'monospace', fontSize: '0.85rem', color: '#86efac',
           border: '1px solid rgba(34,197,94,0.15)',
         }}>
-          cd Digital_APMC/backend<br />
-          node scripts/importMarketPrices.js
+          cd backend<br />
+          npm run import-prices
         </div>
         <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginTop: '0.75rem' }}>
           {t('adminPanel.cliDuration')}
@@ -188,10 +370,7 @@ const AdminPanel = () => {
 
       {/* Actions */}
       <div className="glass-panel" style={{ maxWidth: '100%', margin: 0, padding: '1.75rem 2rem' }}>
-        <h2 style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '1.5rem', color: 'var(--text-muted)',
-          textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-          {t('adminPanel.actions')}
-        </h2>
+        <h2 style={sectionTitle}>{t('adminPanel.actions')}</h2>
 
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', alignItems: 'center' }}>
 
@@ -203,8 +382,6 @@ const AdminPanel = () => {
             style={{
               width: 'auto', padding: '0.75rem 1.75rem', marginTop: 0,
               background: 'linear-gradient(135deg, #eab308, #ca8a04)',
-              opacity: importStatus === 'running' ? 0.6 : 1,
-              cursor: importStatus === 'running' ? 'not-allowed' : 'pointer',
             }}
           >
             🔄 {t('adminPanel.triggerImport')}
@@ -221,8 +398,6 @@ const AdminPanel = () => {
             style={{
               width: 'auto', padding: '0.75rem 1.75rem', marginTop: 0,
               background: 'linear-gradient(135deg, #ef4444, #dc2626)',
-              opacity: clearStatus === 'running' ? 0.6 : 1,
-              cursor: clearStatus === 'running' ? 'not-allowed' : 'pointer',
             }}
           >
             🗑️ {t('adminPanel.clearData')}

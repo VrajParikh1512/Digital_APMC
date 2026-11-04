@@ -8,9 +8,11 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     // Check if user is logged in
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
+    try {
+      const storedUser = localStorage.getItem('user');
+      if (storedUser) setUser(JSON.parse(storedUser));
+    } catch {
+      localStorage.removeItem('user'); // broken value, start fresh
     }
     setLoading(false);
   }, []);

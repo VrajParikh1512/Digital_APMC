@@ -12,3 +12,6 @@ agmarknet-data/
 
 __pycache__/
 *.pyc
+
+.env
+.matplotlib/

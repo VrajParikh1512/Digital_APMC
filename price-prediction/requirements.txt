@@ -4,4 +4,7 @@ lightgbm>=4.3.0
 numpy>=1.26.0
 python-dotenv>=1.0.0
 pydantic>=2.0.0
-
+# needed only for training / daily retraining
+pandas>=2.0.0
+pymongo>=4.6.0
+python-dateutil>=2.8.0

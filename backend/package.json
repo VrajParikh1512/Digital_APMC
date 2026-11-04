@@ -6,7 +6,9 @@
   "type": "module",
   "scripts": {
     "start": "node server.js",
-    "dev": "node --watch server.js"
+    "dev": "node --watch server.js",
+    "import-prices": "node scripts/importMarketPrices.js",
+    "create-admin": "node scripts/createAdmin.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

@@ -84,7 +84,7 @@ const ForecastCard = ({ forecast, basePrice }) => {
       {/* Sub-detail */}
       {!isFlat && (
         <div style={{ fontSize: '0.75rem', color: '#52525b' }}>
-          LightGBM raw: ₹{forecast.raw_lightgbm_price.toLocaleString('en-IN')}
+          Raw model output: ₹{forecast.raw_lightgbm_price.toLocaleString('en-IN')}
         </div>
       )}
     </div>
@@ -183,7 +183,7 @@ const PricePrediction = () => {
 
   // Result state
   const [result,              setResult]              = useState(null);
-  const [serviceOk,           setServiceOk]           = useState(null); // null=checking, true/false
+  const [health,              setHealth]              = useState(null); // null = still checking
   const [loading,             setLoading]             = useState(false);
   const [loadingMeta,         setLoadingMeta]         = useState(true);
   const [loadingCommodities,  setLoadingCommodities]  = useState(false);
@@ -197,10 +197,9 @@ const PricePrediction = () => {
     const checkHealth = async () => {
       try {
         const res = await fetch('/api/price-prediction/health', { headers: authHeaders });
-        const d = await res.json();
-        setServiceOk(d.status === 'ok');
+        setHealth(await res.json());
       } catch {
-        setServiceOk(false);
+        setHealth({ status: 'offline' });
       }
     };
     checkHealth();
@@ -328,23 +327,12 @@ const PricePrediction = () => {
           🔮 Price Prediction
         </h1>
         <p className="subtitle" style={{ textAlign: 'left', marginBottom: 0 }}>
-          AI-powered price forecasts for the next 1–7 market reporting periods using LightGBM
+          Price forecasts for the next 1–7 market reporting periods, based on recent mandi prices
         </p>
       </div>
 
       {/* Service status banner */}
-      {serviceOk === false && (
-        <div style={{
-          background: 'rgba(234,179,8,0.08)', border: '1px solid rgba(234,179,8,0.25)',
-          borderRadius: '12px', padding: '0.75rem 1.25rem',
-          color: '#fde047', marginBottom: '1.5rem', fontSize: '0.88rem',
-          display: 'flex', alignItems: 'center', gap: '0.6rem',
-        }}>
-          <span style={{ fontSize: '1rem' }}>⚡</span>
-          <span>Connecting to price prediction engine... (Adaptive estimates active, predictions remain available)</span>
-        </div>
-      )}
-      {serviceOk === true && (
+      {health && health.model_status === 'trained' && (
         <div style={{
           background: 'rgba(34,197,94,0.06)', border: '1px solid rgba(34,197,94,0.2)',
           borderRadius: '12px', padding: '0.7rem 1.25rem',
@@ -352,7 +340,23 @@ const PricePrediction = () => {
           display: 'flex', alignItems: 'center', gap: '0.5rem',
         }}>
           <span style={{ fontSize: '1rem' }}>✅</span>
-          Prediction service is online and ready.
+          LightGBM model is online and ready
+          {health.trained_through ? ` (trained through ${health.trained_through}).` : '.'}
+        </div>
+      )}
+      {health && health.model_status !== 'trained' && (
+        <div style={{
+          background: 'rgba(234,179,8,0.08)', border: '1px solid rgba(234,179,8,0.25)',
+          borderRadius: '12px', padding: '0.75rem 1.25rem',
+          color: '#fde047', marginBottom: '1.5rem', fontSize: '0.88rem',
+          display: 'flex', alignItems: 'center', gap: '0.6rem',
+        }}>
+          <span style={{ fontSize: '1rem' }}>⚡</span>
+          <span>
+            {health.model_status === 'fallback_mode'
+              ? 'No trained LightGBM model was found, so simple trend-based estimates are shown.'
+              : 'Connecting to the prediction engine… trend-based estimates are shown until it is ready.'}
+          </span>
         </div>
       )}
 
@@ -442,7 +446,7 @@ const PricePrediction = () => {
       {loading && (
         <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '3rem' }}>
           <div style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>🤖</div>
-          <p>Running LightGBM forecasting model…</p>
+          <p>Running price forecast…</p>
         </div>
       )}
 

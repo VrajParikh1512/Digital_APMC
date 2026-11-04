@@ -185,7 +185,8 @@ def _fallback_predict_for_history(history: list[Observation], req):
         'last_modal_price': base_price,
         'recommended_horizon_reporting_steps': 3,
         'forecasts': out,
-        'algorithm': 'LightGBM / Adaptive Mandi Price Trend Estimator',
+        'algorithm': 'Trend-based estimate (trained model not available)',
+        'engine': 'fallback',
         'model_trained_through': None,
         'note': 'Forecast steps represent upcoming market reporting observations. Step 7 is experimental.',
     }
@@ -402,6 +403,7 @@ def predict(req: PredictRequest):
         'recommended_horizon_reporting_steps': 3,
         'forecasts': out,
         'algorithm': 'LightGBM weighted gradient boosted decision trees',
+        'engine': 'lightgbm',
         'model_trained_through': a['metadata'].get('trained_through'),
         'note': (
             'Forecast steps are next market reporting observations, not guaranteed calendar days. '

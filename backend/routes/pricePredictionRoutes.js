@@ -8,7 +8,7 @@ import { protect, farmerOnly } from '../middleware/authMiddleware.js';
 const router = express.Router();
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-// The Python FastAPI service URL
+// The Python FastAPI service URL (server.js loads .env before this file runs)
 const PREDICT_API_URL = process.env.PREDICT_API_URL || 'http://127.0.0.1:8000';
 
 const COMMODITY_GROUP_MAP = {
@@ -22,13 +22,31 @@ const COMMODITY_GROUP_MAP = {
   'Vegetables':  'Vegetables',
 };
 
-// Auto-spawn Python uvicorn service if not running
+// Auto-start the Python uvicorn service, but ONLY if nothing is answering on its port.
+// (start-app.bat also starts it, so we must not start a second copy.)
 let pythonProcess = null;
 let isSpawning = false;
 
-function ensurePythonService() {
+async function isPythonUp() {
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 1500);
+    const res = await fetch(`${PREDICT_API_URL}/health`, { signal: controller.signal });
+    clearTimeout(timeout);
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+async function ensurePythonService() {
   if (pythonProcess || isSpawning) return;
   isSpawning = true;
+
+  if (await isPythonUp()) {
+    isSpawning = false;
+    return;
+  }
 
   const pythonDir = path.resolve(__dirname, '../../price-prediction');
   const pyExecutable = process.env.PYTHON_EXECUTABLE || 'python';
@@ -49,30 +67,32 @@ function ensurePythonService() {
     });
 
     pythonProcess.stderr.on('data', (d) => {
-      // Ignore routine startup info on stderr
       const str = d.toString();
-      if (!str.includes('INFO:') && !str.includes('WARNING:')) {
+      if (str.includes('Application startup complete') || str.includes('Uvicorn running')) {
+        console.log('[PricePredictor] Python FastAPI service is active on port 8000');
+      } else if (!str.includes('INFO:') && !str.includes('WARNING:')) {
         console.error('[PricePredictor]', str.trim());
       }
     });
 
     pythonProcess.on('error', (err) => {
-      console.warn('[PricePredictor] Could not spawn Python service:', err.message);
+      console.warn('[PricePredictor] Could not start Python service:', err.message);
       pythonProcess = null;
-      isSpawning = false;
     });
 
     pythonProcess.on('exit', () => {
       pythonProcess = null;
-      isSpawning = false;
     });
-
-    setTimeout(() => { isSpawning = false; }, 3000);
   } catch (err) {
     console.warn('[PricePredictor] Failed to start Python process:', err.message);
-    isSpawning = false;
+  } finally {
+    // Wait a little before trying again so we do not start many copies
+    setTimeout(() => { isSpawning = false; }, 5000);
   }
 }
+
+// Stop the Python child when the backend stops
+process.on('exit', () => { if (pythonProcess) pythonProcess.kill(); });
 
 // Attempt to start Python service on module load
 ensurePythonService();
@@ -122,7 +142,8 @@ function generateFallbackForecast(history, req) {
     last_modal_price: basePrice,
     recommended_horizon_reporting_steps: 3,
     forecasts,
-    algorithm: 'LightGBM / Adaptive Mandi Price Trend Estimator',
+    algorithm: 'Trend-based estimate (trained model not available)',
+    engine: 'fallback',
     model_trained_through: null,
     note: 'Forecast steps represent upcoming market reporting observations. Step 7 is experimental.',
   };
@@ -153,7 +174,8 @@ router.get('/health', async (req, res) => {
     // we still return status: 'ok' because our built-in fallback handles predictions smoothly.
     return res.json({
       status: 'ok',
-      algorithm: 'LightGBM / Adaptive Mandi Price Trend Estimator',
+      model_status: 'service_offline',
+      algorithm: 'Trend-based estimate (prediction service starting)',
       service_mode: 'resilient_ready',
       price_unit: 'Rs./Quintal',
     });
@@ -173,6 +195,7 @@ router.post('/predict', protect, farmerOnly, async (req, res) => {
       state,
       district = 'Unknown',
       market   = 'Unknown',
+      history_days = 30,
     } = req.body;
 
     if (!commodity || !commodity_group || !state) {
@@ -182,63 +205,66 @@ router.post('/predict', protect, farmerOnly, async (req, res) => {
     }
 
     const normGroup = COMMODITY_GROUP_MAP[commodity_group] || commodity_group;
+    const windowDays = Math.min(Math.max(Number(history_days) || 30, 7), 365);
 
-    // Build base query using exact strings for maximum indexing speed
-    const baseQuery = {
+    // Base filter: this crop, in this state
+    const baseMatch = {
       commodity: commodity.trim(),
       state:     state.trim(),
+      modal_price: { $gt: 0 },
+    };
+    if (normGroup) baseMatch.commodity_group = normGroup.trim();
+
+    // Optional narrower filter: district / market
+    const areaMatch = {};
+    if (district && district !== 'Unknown') areaMatch.district = district.trim();
+    if (market && market !== 'Unknown')     areaMatch.market   = market.trim();
+
+    // One row per day (average of all matching markets), newest 60 days, then oldest -> newest.
+    // Grouping by day matters: a state has many markets, so reading raw rows would
+    // return only 1-2 different days and the prediction would fail.
+    const loadDailyHistory = async (extraMatch) => {
+      const rows = await MarketPrice.aggregate([
+        { $match: { ...baseMatch, ...extraMatch } },
+        {
+          $group: {
+            _id:              { $dateToString: { format: '%Y-%m-%d', date: '$date' } },
+            modal_price:      { $avg: '$modal_price' },
+            min_price:        { $avg: '$min_price' },
+            max_price:        { $avg: '$max_price' },
+            arrival_quantity: { $avg: '$arrival_qty' },
+          },
+        },
+        { $sort: { _id: -1 } },
+        { $limit: 60 },
+      ]);
+      const round2 = (v) => (v == null ? null : Math.round(v * 100) / 100);
+      return rows.reverse().map(r => ({
+        date:             r._id,
+        modal_price:      round2(r.modal_price),
+        min_price:        round2(r.min_price),
+        max_price:        round2(r.max_price),
+        arrival_quantity: round2(r.arrival_quantity),
+      }));
     };
 
-    if (normGroup) {
-      baseQuery.commodity_group = normGroup.trim();
+    let history = await loadDailyHistory(areaMatch);
+
+    // Too little data for that district/market -> use the whole state
+    if (history.length < 2 && Object.keys(areaMatch).length > 0) {
+      history = await loadDailyHistory({});
     }
 
-    // Try specific district/market if provided
-    let query = { ...baseQuery };
-    if (district && district !== 'Unknown') {
-      query.district = district.trim();
-    }
-    if (market && market !== 'Unknown') {
-      query.market = market.trim();
-    }
-
-    // Fetch latest observations sorted by date descending
-    let rows = await MarketPrice.find(query)
-      .sort({ date: -1 })
-      .limit(100)
-      .lean();
-
-    // If specific market/district had fewer than 2 records, broaden to state level
-    if (rows.length < 2 && (query.market || query.district)) {
-      rows = await MarketPrice.find(baseQuery)
-        .sort({ date: -1 })
-        .limit(100)
-        .lean();
+    // Apply the "history window" chosen by the farmer (relative to the latest record)
+    if (history.length >= 2) {
+      const lastDay = new Date(history[history.length - 1].date).getTime();
+      const cutoff = lastDay - windowDays * 24 * 60 * 60 * 1000;
+      const inWindow = history.filter(h => new Date(h.date).getTime() >= cutoff);
+      if (inWindow.length >= 2) history = inWindow;
     }
 
-    // Group and deduplicate by calendar date
-    const byDate = new Map();
-    for (const row of rows) {
-      if (!row.date || row.modal_price == null || row.modal_price <= 0) continue;
-      const dt = (row.date instanceof Date ? row.date : new Date(row.date))
-        .toISOString()
-        .slice(0, 10);
-
-      if (!byDate.has(dt)) {
-        byDate.set(dt, {
-          date: dt,
-          modal_price: Number(row.modal_price),
-          arrival_quantity: row.arrival_qty != null ? Number(row.arrival_qty) : null,
-          min_price: row.min_price != null ? Number(row.min_price) : null,
-          max_price: row.max_price != null ? Number(row.max_price) : null,
-        });
-      }
-    }
-
-    // Chronological order, take the last 15 observations
-    const history = [...byDate.values()]
-      .sort((a, b) => a.date.localeCompare(b.date))
-      .slice(-15);
+    // The model only needs the latest 15 observations
+    history = history.slice(-15);
 
     if (history.length < 2) {
       return res.status(422).json({
@@ -273,7 +299,8 @@ router.post('/predict', protect, farmerOnly, async (req, res) => {
       if (upstreamRes.ok) {
         const result = await upstreamRes.json();
         return res.json({
-          ...result,
+          engine: 'lightgbm',
+          ...result, // the Python service sets "engine" itself and wins over the default above
           history_used: history,
         });
       }

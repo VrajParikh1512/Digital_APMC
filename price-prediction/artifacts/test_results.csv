@@ -1,0 +1,5 @@
+forecast_step,test_rows,baseline_mape_pct,model_mape_pct,baseline_mae_rs,model_mae_rs,baseline_within20_pct,model_within20_pct,improvement_pct
+1,2177394,7.06,6.95,263.97,259.92,91.81,92.01,1.47
+2,2177394,8.79,8.57,325.4,316.82,89.27,89.83,2.44
+3,2177394,9.8,9.5,366.58,356.34,87.39,88.09,3.06
+7,2177394,12.51,12.2,478.03,466.39,82.29,82.88,2.46
