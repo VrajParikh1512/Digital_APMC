@@ -8,7 +8,8 @@
     "start": "node server.js",
     "dev": "node --watch server.js",
     "import-prices": "node scripts/importMarketPrices.js",
-    "create-admin": "node scripts/createAdmin.js"
+    "create-admin": "node scripts/createAdmin.js",
+    "seed-data": "node scripts/seedUsersAndCrops.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
